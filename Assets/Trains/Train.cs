@@ -6,8 +6,9 @@ public class Train : MonoBehaviour {
 
 	public float speed = 10f;
 	private Rigidbody rb;
-	private bool travelRight = true;
+	private enum TravelDirection {Idle,Right,Left}
 	private Vector3 newPos;
+	private TravelDirection travelDirection;
 
 	// Use this for initialization
 	void Start () {
@@ -18,21 +19,30 @@ public class Train : MonoBehaviour {
 	// Update is called once per frame
 	void Update () {
 		if (transform.position.x < -50f) {
-			travelRight = true;
+			travelDirection = TravelDirection.Right;
 		} else if (transform.position.x > 50f) {
-			travelRight = false;
+			travelDirection = TravelDirection.Left;
 		}
 
-		if (travelRight) {
+		SetTravelVelocity ();
+	}
+
+	void SetTravelVelocity ()
+	{
+		if (travelDirection == TravelDirection.Right) {
 			print ("Setting speed right" + Vector3.right * speed);
-			newPos.x = transform.position.x + speed * Time.deltaTime;
-			transform.position = newPos;
-			//rb.velocity = Vector3.right * speed;
-		} else {
+			//			newPos.x = transform.position.x + speed * Time.deltaTime;
+			//			transform.position = newPos;
+			rb.velocity = Vector3.right * speed;
+			travelDirection = TravelDirection.Idle;
+		}
+		else if (travelDirection == TravelDirection.Left) {
 			print ("Setting speed left" + Vector3.left * speed);
-			newPos.x = transform.position.x - speed * Time.deltaTime;
-			transform.position = newPos;
-			//rb.velocity = Vector3.left * speed;
+			//			newPos.x = transform.position.x - speed * Time.deltaTime;
+			//			transform.position = newPos;
+			rb.velocity = Vector3.left * speed;
+			travelDirection = TravelDirection.Idle;
 		}
 	}
+
 }
