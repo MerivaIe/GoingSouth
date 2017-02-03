@@ -6,6 +6,9 @@ using UnityEngine.AI;
 [RequireComponent(typeof(NavMeshAgent))]
 public class Person : MonoBehaviour {
 
+	public AgentStatus agentStatus;				//public get, privat set?
+	public enum AgentStatus{ToWaitingArea,AtWaitingArea,ToPlatform,AtPlatform,ToTrain,AtTrain}
+
 	private NavMeshAgent nmAgent;
 	private Rigidbody rb;
 
