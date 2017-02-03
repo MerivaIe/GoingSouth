@@ -6,8 +6,8 @@ using UnityEngine.AI;
 [RequireComponent(typeof(NavMeshAgent))]
 public class Person : MonoBehaviour {
 
-	public AgentStatus agentStatus;				//public get, privat set?
-	public enum AgentStatus{ToWaitingArea,AtWaitingArea,ToPlatform,AtPlatform,ToTrain,AtTrain}
+	public PersonStatus agentStatus;				//public get, privat set?
+	public enum PersonStatus{ToWaitingArea,AtWaitingArea,ToPlatform,AtPlatform,ToTrain,AtTrain}
 
 	private NavMeshAgent nmAgent;
 	private Rigidbody rb;
@@ -15,24 +15,23 @@ public class Person : MonoBehaviour {
 	void Start () {
 		rb = GetComponent <Rigidbody> ();
 		nmAgent = GetComponent <NavMeshAgent>();
-		nmAgent.SetDestination (GameObject.Find("Target").transform.position);
 	}
 	
 	void Update () {
 		//nmAgent.SetDestination (GameObject.Find("Target").transform.position);
 
-		RaycastHit hit;
-		if (Input.GetMouseButtonDown(0)) {
-			Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-			if (Physics.Raycast(ray, out hit))
-				nmAgent.SetDestination(hit.point);
-
-		}
+//		RaycastHit hit;
+//		if (Input.GetMouseButtonDown(0)) {
+//			Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+//			if (Physics.Raycast(ray, out hit))
+//				nmAgent.SetDestination(hit.point);
+//
+//		}
 
 	}
 
 	void OnCollisionEnter(Collision coll) {
-		Debug.Log ("Colliding");
+		Debug.Log ("Person colliding");
 		if (coll.gameObject.GetComponent <Train> ()) {
 			rb.isKinematic = false;
 			nmAgent.enabled = false;
