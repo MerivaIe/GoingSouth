@@ -28,6 +28,7 @@ public class PersonSpawner : MonoBehaviour {
 				Vector3 platformPos = platforms[platformNo].transform.position;
 				//set platform destination randomly from publically exposed platforms
 				nmAgent.SetDestination (platformPos);
+				Debug.Log ("Set destination to :" + platformPos);
 			}
 		}
 	}
