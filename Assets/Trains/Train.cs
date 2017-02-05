@@ -4,53 +4,59 @@ using UnityEngine;
 
 public class Train : MonoBehaviour {
 
-	public float brakeTime = 1f;
+	//tried doing all this with force but too difficult and also I imagine kinematic would be required
+
 	public float speed = 10f;
 
 	private TravelDirection travelDirection;
-	private enum TravelDirection {Idle,Right,Left,Brake}
+	private enum TravelDirection {Idle,Moving,SetRight,SetLeft,Brake}
 	private Rigidbody rb;
-	private Vector3 newPos;
+	private float stoppingInterval = 0f;
 
-
-	// Use this for initialization
 	void Start () {
 		rb = GetComponentInChildren <Rigidbody> ();
-		newPos = transform.position;
 	}
-	
-	// Update is called once per frame
-	void Update () {
+
+	//maybe use force to apply movement and brake.
+	void FixedUpdate () {
+		//Setting direction of motion
 		if (transform.position.x < -50f) {
-			travelDirection = TravelDirection.Right;
+			travelDirection = TravelDirection.SetRight;
 		} else if (transform.position.x > 50f) {
-			travelDirection = TravelDirection.Left;
+			travelDirection = TravelDirection.SetLeft;
 		}
 
-		SetTravelVelocity ();
-	}
-
-	void SetTravelVelocity ()
-	{
-		if (travelDirection == TravelDirection.Right) {
-			print ("Setting speed right" + Vector3.right * speed);
-			rb.velocity = Vector3.right * speed;
-			travelDirection = TravelDirection.Idle;
-		}
-		else if (travelDirection == TravelDirection.Left) {
-			print ("Setting speed left" + Vector3.left * speed);
-			rb.velocity = Vector3.left * speed;
-			travelDirection = TravelDirection.Idle;
+		Vector3 newVelocity;
+		//Executing direction of motion
+		if (travelDirection == TravelDirection.SetRight) {
+			newVelocity = Vector3.right * speed;
+			travelDirection = TravelDirection.Moving;
+		} else if (travelDirection == TravelDirection.SetLeft) {
+			newVelocity = Vector3.left * speed;
+			travelDirection = TravelDirection.Moving;
 		} else if (travelDirection == TravelDirection.Brake) {
-			//reduce velocity gradually to 0
-			Vector3 reducedVelocity = Vector3.Lerp (rb.velocity,Vector3.zero,brakeTime*Time.deltaTime);
-			print ("Reducing velocity to: " + reducedVelocity);
-			rb.velocity = reducedVelocity;
+			//float stopDuration = (stoppingPointX - transform.position.x) / Mathf.Pow (rb.velocity.x, 2);
+			//reduce velocity gradually to zero
+			newVelocity = Vector3.Lerp (rb.velocity, Vector3.zero, stoppingInterval);
+			if (newVelocity.Equals (Vector3.zero)) {travelDirection = TravelDirection.Idle;}
+		} else {
+			//keep same TODO: make sure that this does not cause jitter as the trains are non-kinematic and setting every FixedUpdate could be bad
+			return;
 		}
-	}
 
-	public void Brake(float stopPointX) {
-		travelDirection = TravelDirection.Brake;
+		rb.velocity = newVelocity;
+	}
+		
+	void OnTriggerEnter(Collider coll) {
+		Signal signal = coll.GetComponent <Signal>();
+		if (signal) {
+			Debug.Log ("Train " + gameObject.name + " triggered by signal" + coll.gameObject.name);
+			if (signal.signalType == Signal.SignalType.Brake) {
+				travelDirection = TravelDirection.Brake;
+				float stoppingPointX = coll.gameObject.transform.position.x + coll.bounds.extents.x; //TODO change so this is point on platform it needs to stop at
+				stoppingInterval = Time.fixedDeltaTime * rb.velocity.x / (stoppingPointX - transform.position.x);
+			}
+		}
 	}
 
 }
