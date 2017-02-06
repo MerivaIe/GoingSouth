@@ -6,7 +6,7 @@ using UnityEngine.AI;
 [RequireComponent(typeof(NavMeshAgent))]
 public class Person : MonoBehaviour {
 
-	public PersonStatus agentStatus;				//public get, privat set?
+	public PersonStatus personStatus;				//public get, privat set?
 	public enum PersonStatus{ToWaitingArea,AtWaitingArea,ToPlatform,AtPlatform,ToTrain,AtTrain}
 	public bool manualTestingOn =false;
 
@@ -19,31 +19,19 @@ public class Person : MonoBehaviour {
 	}
 	
 	void Update () {
-		//nmAgent.SetDestination (GameObject.Find("Target").transform.position);
-		if (manualTestingOn) {
-			RaycastHit hit;
-			if (Input.GetMouseButtonDown (0)) {
-				Ray ray = Camera.main.ScreenPointToRay (Input.mousePosition);
-				if (Physics.Raycast (ray, out hit)) {
-					nmAgent.SetDestination (hit.point);
-					Debug.Log ("Targetting " + hit.point);
-				}
-			}
-		}
+
 	}
 
 	void OnCollisionEnter(Collision coll) {
-//		Debug.Log ("Person colliding");
-//		if (coll.gameObject.GetComponent <Train> ()) {
-//			rb.isKinematic = false;
-//			nmAgent.enabled = false;
-//			Debug.Log ("Train script found in object");
-//
-//		} else if (coll.gameObject.GetComponentInParent <Train> ()) {
-//
-//			rb.isKinematic = false;
-//			nmAgent.enabled = false;
-//			Debug.Log ("Train script found in parent object");
-//		}
+		//TODO: ccreate a trigger box just ahead of the collider and the FIRST time a person enters it turn their kinemtic and nmagent off ready for beautiful physics interactions
+		if (coll.gameObject.GetComponentInParent <Train> ()) {								//hit by train (trigger) so turn off kinematic
+			rb.isKinematic = false;
+			nmAgent.enabled = false;
+			Debug.Log ("Train script found in parent object. Turning person to ragdoll");
+		}
+		Person person = coll.gameObject.GetComponent <Person>();
+		if (person) {
+
+		}
 	}
 }
