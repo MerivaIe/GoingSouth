@@ -7,20 +7,17 @@ public class Train : MonoBehaviour {
 	//tried doing all this with force but too difficult and also I imagine kinematic would be required
 
 	public float speed = 10f;
-	public float[] DoorLocations { get{return doorLocations;} }
+	public bool isBoardingTime = false;
+	public TravelDirection travelDirection{ get; private set; }
+	public enum TravelDirection {BoardingTime,Moving,SetRight,SetLeft,Brake}
 
-	private TravelDirection travelDirection;
-	private enum TravelDirection {Idle,Moving,SetRight,SetLeft,Brake}
 	private Rigidbody rb;
-	private float stoppingInterval = 0f;
+	private float totalStoppingDistance;
+	private float startPosX;
+	private float startVelocityX;
 
-	private float[] doorLocations = new float[2];						//X distance from very front of the train
-
-	void Awake () {
-		rb = GetComponentInChildren <Rigidbody> ();
-		doorLocations [0] = 6.7f;										//TODO if trains are made at runtime later, then set doorLocations as they are generated. A pivot point on the front of the train would work nicely
-		doorLocations [1] = 16.8f;
-
+	void Start () {
+		rb = GetComponent <Rigidbody> ();
 	}
 
 	void FixedUpdate () {
@@ -31,7 +28,7 @@ public class Train : MonoBehaviour {
 			travelDirection = TravelDirection.SetLeft;
 		}
 
-		Vector3 newVelocity;
+		Vector3 newVelocity = new Vector3();
 		//Executing direction of motion
 		if (travelDirection == TravelDirection.SetRight) {
 			newVelocity = Vector3.right * speed;
@@ -40,8 +37,11 @@ public class Train : MonoBehaviour {
 			newVelocity = Vector3.left * speed;
 			travelDirection = TravelDirection.Moving;
 		} else if (travelDirection == TravelDirection.Brake) {
-			newVelocity = Vector3.Lerp (rb.velocity, Vector3.zero, stoppingInterval);				//reduce velocity gradually to zero, interval set OnTriggerEnter if triggered by Brake Signal
-			if (newVelocity.Equals (Vector3.zero)) {travelDirection = TravelDirection.Idle;}
+			newVelocity.x = Mathf.Lerp (startVelocityX,0f,(transform.position.x-startPosX)/totalStoppingDistance);	//reduce velocity gradually to zero
+			if (newVelocity.x <= 0.0001f) {
+				newVelocity.x = 0f;
+				travelDirection = TravelDirection.BoardingTime;
+			}
 		} else {
 			return;
 		}
@@ -55,7 +55,9 @@ public class Train : MonoBehaviour {
 		if (signal) {
 			if (signal.signalType == Signal.SignalType.Brake) {
 				travelDirection = TravelDirection.Brake;
-				stoppingInterval = Time.fixedDeltaTime * rb.velocity.x / coll.bounds.size.x;		//interval = dist travelled each fixed update / total dist to stop over
+				startVelocityX = rb.velocity.x;
+				startPosX = transform.position.x;
+				totalStoppingDistance = coll.bounds.max.x-startPosX; //end of signal trigger - position of front of train
 			}
 		}
 	}

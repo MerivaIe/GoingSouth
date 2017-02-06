@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 
 public class Platform : MonoBehaviour {
 
@@ -9,6 +10,7 @@ public class Platform : MonoBehaviour {
 
 	public string nextDeparture { get; private set; }
 	public Train incomingTrain { get; private set; }
+	public List<Person> peopleAtPlatform = new List<Person> ();
 
 	private List<Vector3> waitLocations = new List<Vector3>();
 
@@ -20,15 +22,38 @@ public class Platform : MonoBehaviour {
 
 	void RecalculateWaitLocations() {
 		waitLocations.Clear ();
-		foreach (float xLocation in incomingTrain.DoorLocations) {
-			Vector3 offset = new Vector3 (-xLocation-0.1f,0.5f,-2f);		//messy addition of -0.1f to xOffset to acount for trigger time telling train to slow
-			Vector3 newWait = transform.parent.gameObject.GetComponentInChildren <BoxCollider> ().bounds.max + offset;
+		Door[] doors = incomingTrain.GetComponentsInChildren <Door> ();
+		Vector3 doorOffset = new Vector3 (0f,0.5f,-2f);//messy addition of -0.1f to xOffset to acount for trigger time telling train to slow
+		foreach (Door door in doors) {
+			doorOffset.x = door.gameObject.transform.localPosition.x;
+			Vector3 newWait = GetComponentInChildren<Signal>().gameObject.GetComponent <BoxCollider> ().bounds.max + doorOffset;
 			waitLocations.Add (newWait);
 		}
 	}
 
-	public Vector3 GetRandomWaitLocation() {
-		return waitLocations[Random.Range (0, waitLocations.Count)];
+	void OnTriggerEnter(Collider coll) {
+		Person person = coll.gameObject.GetComponent <Person> ();
+		if (person) {
+			peopleAtPlatform.Add (person);
+			if (nextDeparture == person.destination) {
+				Debug.Log("Destination matches desired destination so setting door location");
+				person.GetComponent <NavMeshAgent>().SetDestination (waitLocations[Random.Range (0, waitLocations.Count)]);
+				person.currentPlatform = this;
+				person.status = Person.Status.ReadyToBoard;
+			}
+		}
+	}
+
+	void OnTriggerExit(Collider coll) {
+		Person person = coll.gameObject.GetComponent <Person> ();
+		if (person) {
+			person.currentPlatform = null;
+			try {
+				peopleAtPlatform.Remove (person);
+			} catch {
+				Debug.LogWarning ("Trying to remove person from platform list but could not find them.");
+			}
+		}
 	}
 
 	void OnDrawGizmos() {
