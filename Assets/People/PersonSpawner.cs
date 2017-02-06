@@ -24,11 +24,8 @@ public class PersonSpawner : MonoBehaviour {
 				GameObject person = Instantiate (personPrefab, spawnPoint.transform.position, Quaternion.identity) as GameObject;
 				person.transform.parent = organisingParent.transform;
 				NavMeshAgent nmAgent = person.GetComponent <NavMeshAgent> ();
-				int platformNo = Random.Range (0, platforms.Length);
-				Vector3 platformPos = platforms[platformNo].transform.position;
-				//set platform destination randomly from publically exposed platforms
-				nmAgent.SetDestination (platformPos);
-				Debug.Log ("Set destination to :" + platformPos);
+				Vector3 platformPos = platforms[Random.Range (0, platforms.Length)].transform.position;	//set platform destination randomly from publically exposed platforms
+				nmAgent.SetDestination (platformPos);													//TODO rather than centre of the platform just set this to 
 			}
 		}
 	}
