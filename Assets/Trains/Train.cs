@@ -28,7 +28,7 @@ public class Train : MonoBehaviour {
 			travelDirection = TravelDirection.SetLeft;
 		}
 
-		Vector3 newVelocity = new Vector3();
+		Vector3 newVelocity = rb.velocity;
 		//Executing direction of motion
 		if (travelDirection == TravelDirection.SetRight) {
 			newVelocity = Vector3.right * speed;

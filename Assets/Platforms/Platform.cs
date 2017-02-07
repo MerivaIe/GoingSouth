@@ -28,7 +28,10 @@ public class Platform : MonoBehaviour {
 			doorOffset.x = door.gameObject.transform.localPosition.x;
 			Vector3 newWait = GetComponentInChildren<Signal>().gameObject.GetComponent <BoxCollider> ().bounds.max + doorOffset;
 			waitLocations.Add (newWait);
+			Gizmos.color = Color.green;
+			Gizmos.DrawWireSphere (newWait, 1f);
 		}
+
 	}
 
 	void OnTriggerEnter(Collider coll) {
@@ -37,9 +40,10 @@ public class Platform : MonoBehaviour {
 			peopleAtPlatform.Add (person);
 			if (nextDeparture == person.destination) {
 				Debug.Log("Destination matches desired destination so setting door location");
-				person.GetComponent <NavMeshAgent>().SetDestination (waitLocations[Random.Range (0, waitLocations.Count)]);
 				person.currentPlatform = this;
 				person.status = Person.Status.ReadyToBoard;
+				person.ToggleAgentControl (true);
+				person.GetComponent <NavMeshAgent>().SetDestination (waitLocations[Random.Range (0, waitLocations.Count)]);
 			}
 		}
 	}
@@ -57,11 +61,11 @@ public class Platform : MonoBehaviour {
 	}
 
 	void OnDrawGizmos() {
-		if (waitLocations.Count > 0) {
-			Gizmos.color = Color.green;
-			foreach (Vector3 waitLocation in waitLocations) {
-				Gizmos.DrawWireSphere (waitLocation, 1f);
-			}
-		}
+//		if (waitLocations.Count > 0) {
+//			Gizmos.color = Color.green;
+//			foreach (Vector3 waitLocation in waitLocations) {
+//
+//			}
+//		}
 	}
 }
