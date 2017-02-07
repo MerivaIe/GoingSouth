@@ -11,12 +11,12 @@ public class Person : MonoBehaviour {
 	public PersonStatus status; 
 	public string destination{ get; private set; }
 	public Platform currentPlatform;
-	public float navTargetThreshold = 0.1f, jostlingStrength = 0.25f, centreOfMassYOffset = -0.5f, proximityDistance = 4f, checkProximityEvery = 1f, randomProximityMod = 0.1f;
+	public float navTargetThreshold = 0.1f, jostlingStrength = 0.25f, centreOfMassYOffset = -0.5f, checkProximityEvery = 1f, randomProximityMod = 0.1f;
 
 	private NavMeshAgent nmAgent;
 	private Rigidbody rb;
 	private Vector3[] proximityDirections = new Vector3[8];
-	private float nextProximityCheck;
+	private float nextProximityCheck, proximityDistance;
 
 	void Start () {
 		rb = GetComponent <Rigidbody> ();
@@ -25,7 +25,7 @@ public class Person : MonoBehaviour {
 		rb.centerOfMass = new Vector3(0f,centreOfMassYOffset,0f);
 		for (int i=0;i<proximityDirections.Length;i++) {
 			//using square wave function to calculate 8 directions at compass points
-			proximityDirections [i] = new Vector3 (MyUtility.Sign(Mathf.Cos (i*Mathf.PI/4f)),0f,MyUtility.Sign(Mathf.Sin (i*Mathf.PI/4f)));
+			proximityDirections [i] = new Vector3 (Mathf.Cos (i*Mathf.PI/4f),0f,Mathf.Sin (i*Mathf.PI/4f));
 		}
 	}
 
@@ -38,30 +38,26 @@ public class Person : MonoBehaviour {
 				} else if (nmAgent.remainingDistance <= navTargetThreshold) {
 					ToggleAgentControl (false);
 					newVelocity = Vector3.forward * nmAgent.speed;
+					proximityDistance = currentPlatform.incomingTrain.length;
 					status = PersonStatus.Boarded;											//may want a better way of checking to confirm boarded
 				}
 			} else {return;}
 		} else if (!rb.isKinematic && status == PersonStatus.Boarded && Time.time > nextProximityCheck) {
 			nextProximityCheck = Time.time + checkProximityEvery;
 			Vector3 proximityCorrection = Vector3.zero;
+			RaycastHit hit;
 
 			foreach(Vector3 direction in proximityDirections) {
-				if (!Physics.Raycast (transform.position, direction, proximityDistance)) {	//if we don't hit something in this direction
-					proximityCorrection = (proximityCorrection + direction)/2;				//average it with the accumulating proximityCorrection we are building up
-					Debug.DrawRay (transform.position,direction.normalized*proximityDistance,Color.green,0.1f);
-				}
+				Physics.Raycast (transform.position, direction, out hit, proximityDistance);
+				Vector3 newProxCorr = direction.normalized * hit.distance;
+				proximityCorrection += newProxCorr;											//add it to the accumulating proximityCorrection we are building up
+				Debug.DrawRay (transform.position,newProxCorr,Color.green,0.1f);
 			}
-			proximityCorrection.x += Random.Range (-randomProximityMod, randomProximityMod);
-			proximityCorrection.z += Random.Range (0f, randomProximityMod);
-			newVelocity += jostlingStrength * proximityCorrection;
+			newVelocity += jostlingStrength * proximityCorrection/proximityDirections.Length;
+			Debug.Log ("After proximity checking of: " + jostlingStrength * proximityCorrection + ", giving person newVelocity: " + newVelocity );
 
 			//Use the following for random movement if anything in overlap
-//			Collider[] hitColliders = Physics.OverlapSphere (transform.position, 1f);
-//			foreach (Collider hitCollider in hitColliders) {
-//				if (hitCollider.gameObject != gameObject) {
-//					newVelocity += new Vector3 (Random.Range(-jostlingStrength,jostlingStrength),0f,Random.Range(-jostlingStrength,jostlingStrength));
-//				}
-//			}
+//			newVelocity += new Vector3 (Random.Range(-jostlingStrength,jostlingStrength),0f,Random.Range(-jostlingStrength,jostlingStrength));
 		} else {return;}
 
 		rb.velocity = newVelocity;

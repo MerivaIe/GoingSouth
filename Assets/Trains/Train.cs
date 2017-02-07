@@ -6,7 +6,7 @@ public class Train : MonoBehaviour {
 
 	//tried doing all this with force but too difficult and also I imagine kinematic would be required
 
-	public float speed = 10f;
+	public float speed = 10f, length;
 	public bool isBoardingTime = false;
 	public enum TrainStatus {BoardingTime,Moving,SetRight,SetLeft,Brake}
 	public TrainStatus status{ get; private set; }
@@ -16,6 +16,7 @@ public class Train : MonoBehaviour {
 
 	void Start () {
 		rb = GetComponent <Rigidbody> ();
+		length = 20f; //TODO hard coded
 	}
 
 	void FixedUpdate () {
