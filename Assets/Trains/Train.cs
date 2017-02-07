@@ -8,13 +8,11 @@ public class Train : MonoBehaviour {
 
 	public float speed = 10f;
 	public bool isBoardingTime = false;
-	public TravelDirection travelDirection{ get; private set; }
-	public enum TravelDirection {BoardingTime,Moving,SetRight,SetLeft,Brake}
+	public enum TrainStatus {BoardingTime,Moving,SetRight,SetLeft,Brake}
+	public TrainStatus status{ get; private set; }
 
 	private Rigidbody rb;
-	private float totalStoppingDistance;
-	private float startPosX;
-	private float startVelocityX;
+	private float totalStoppingDistance, startPosX, startVelocityX;
 
 	void Start () {
 		rb = GetComponent <Rigidbody> ();
@@ -23,38 +21,42 @@ public class Train : MonoBehaviour {
 	void FixedUpdate () {
 		//Deciding direction of motion
 		if (transform.position.x < -50f) {
-			travelDirection = TravelDirection.SetRight;
+			status = TrainStatus.SetRight;
 		} else if (transform.position.x > 50f) {
-			travelDirection = TravelDirection.SetLeft;
+			status = TrainStatus.SetLeft;
 		}
 
 		Vector3 newVelocity = rb.velocity;
 		//Executing direction of motion
-		if (travelDirection == TravelDirection.SetRight) {
+		switch (status) {
+		case TrainStatus.SetRight:
 			newVelocity = Vector3.right * speed;
-			travelDirection = TravelDirection.Moving;
-		} else if (travelDirection == TravelDirection.SetLeft) {
+			status = TrainStatus.Moving;
+			break;
+		case TrainStatus.SetLeft:
 			newVelocity = Vector3.left * speed;
-			travelDirection = TravelDirection.Moving;
-		} else if (travelDirection == TravelDirection.Brake) {
-			newVelocity.x = Mathf.Lerp (startVelocityX,0f,(transform.position.x-startPosX)/totalStoppingDistance);	//reduce velocity gradually to zero
+			status = TrainStatus.Moving;
+			break;
+		case TrainStatus.Brake:
+			newVelocity.x = Mathf.Lerp (startVelocityX, 0f, (transform.position.x - startPosX) / totalStoppingDistance);	//reduce velocity gradually to zero
 			if (newVelocity.x <= 0.0001f) {
-				newVelocity.x = 0f;
-				travelDirection = TravelDirection.BoardingTime;
+				status = TrainStatus.BoardingTime;
 			}
-		} else {
+			break;
+		case TrainStatus.BoardingTime:
+//			newVelocity.x = 0f;		//Shutting down any movement, could still be rotation. TODO: may be better to just constrain Trains
+//			break;
+		default:
 			return;
 		}
-
-		//TODO: make sure that this does not cause jitter as the trains are non-kinematic and setting every FixedUpdate could be bad
-		rb.velocity = newVelocity;
+		rb.velocity = newVelocity;				//TODO: make sure that this does not cause jitter as the trains are non-kinematic and setting every FixedUpdate could be bad
 	}
 		
 	void OnTriggerEnter(Collider coll) {
 		Signal signal = coll.GetComponent <Signal>();
 		if (signal) {
 			if (signal.signalType == Signal.SignalType.Brake) {
-				travelDirection = TravelDirection.Brake;
+				status = TrainStatus.Brake;
 				startVelocityX = rb.velocity.x;
 				startPosX = transform.position.x;
 				totalStoppingDistance = coll.bounds.max.x-startPosX; //end of signal trigger - position of front of train
