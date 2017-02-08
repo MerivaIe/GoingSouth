@@ -23,6 +23,7 @@ public class PersonSpawner : MonoBehaviour {
 			if (IsTimeToSpawn ()) {
 				GameObject person = Instantiate (personPrefab, spawnPoint.transform.position, Quaternion.identity) as GameObject;
 				person.transform.parent = organisingParent.transform;
+				person.GetComponent <Person>().status = Person.PersonStatus.MovingToPlatform;
 				NavMeshAgent nmAgent = person.GetComponent <NavMeshAgent> ();
 				Vector3 platformPos = platforms[Random.Range (0, platforms.Length)].transform.position;	//set platform destination randomly from publically exposed platforms
 				nmAgent.speed = Random.Range(2f,5f);
