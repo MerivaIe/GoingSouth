@@ -35,7 +35,7 @@ public class Person : MonoBehaviour {
 				Debug.LogError ("NavMeshAgent has no path: slipped through cracks?");
 			} else if (nmAgent.remainingDistance <= navTargetThreshold) {
 				ToggleAgentControl (false);
-				newVelocity = Vector3.forward * boardingSpeed;
+				//newVelocity = Vector3.forward * boardingSpeed;	//removed this because of boarding pressure now
 				proximityDistance = currentPlatform.incomingTrain.length;
 				status = PersonStatus.Boarding;											//may want a better way of checking to confirm boarded
 			}

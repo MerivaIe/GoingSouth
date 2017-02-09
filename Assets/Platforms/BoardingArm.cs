@@ -2,13 +2,16 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class BoardingAssistant : MonoBehaviour {
+public class BoardingArm : MonoBehaviour {
 
 	public Rigidbody joinTo;
+	public GameObject platform;
 
 	private Rigidbody rb;
 	private ConstantForce myConstantForce;
 	private FixedJoint fixedJoint;
+	private Train incomingTrain;
+	private bool boarding = false;
 
 	void Start () {
 		rb = GetComponent <Rigidbody> ();
@@ -17,10 +20,22 @@ public class BoardingAssistant : MonoBehaviour {
 		if (fixedJoint) {
 			joinTo = fixedJoint.connectedBody;
 		}
+		incomingTrain = platform.GetComponent <Platform> ().incomingTrain;
+	}
+
+	void FixedUpdate() {
+		if (incomingTrain && incomingTrain.status == Train.TrainStatus.BoardingTime && boarding == false) {
+			myConstantForce.enabled = true;
+			boarding = true;
+		}
+	}
+
+	void Reset() {
+
 	}
 
 	void OnCollisionEnter(Collision coll) {
-		if (coll.gameObject.GetComponentInParent <Train> ()) {
+		if (coll.gameObject.tag == "PlatformBumper" || coll.gameObject.GetComponentInParent <Train>()) {
 			rb.constraints = RigidbodyConstraints.FreezeAll;
 			myConstantForce.enabled = false;
 			if (fixedJoint) {
