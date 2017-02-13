@@ -52,11 +52,7 @@ public class Person : MonoBehaviour {
 					Debug.DrawRay (transform.position,direction.normalized * hit.distance,Color.green,0.1f);
 				}
 			}
-
 			newVelocity += proximityCorrection * jostlingStrength;
-
-			//Use the following for random movement if anything in overlap
-			//newVelocity += new Vector3 (Random.Range(-jostlingStrength,jostlingStrength),0f,Random.Range(-jostlingStrength,jostlingStrength));
 		} else {return;}
 		rb.velocity = newVelocity;
 	}

@@ -4,43 +4,58 @@ using UnityEngine;
 
 public class BoardingArm : MonoBehaviour {
 
-	public Rigidbody joinTo;
-	public GameObject platform;
+	public float jointBreakingDelay = 0.5f;
 
-	private Rigidbody rb;
+	private Rigidbody joinTo;
+	private Platform platform;
 	private ConstantForce myConstantForce;
-	private FixedJoint fixedJoint;
+	private FixedJoint outboundFJ, inboundFJ;
 	private Train incomingTrain;
 	private bool boarding = false;
+	private BoardingArm joinedToBoardingArm;
+	private Vector3 originalPos;
 
 	void Start () {
-		rb = GetComponent <Rigidbody> ();
+		originalPos = transform.position;
 		myConstantForce = GetComponent <ConstantForce> ();
-		fixedJoint = GetComponent <FixedJoint> ();
-		if (fixedJoint) {
-			joinTo = fixedJoint.connectedBody;
+		outboundFJ = GetComponent <FixedJoint> ();
+		if (outboundFJ) {
+			joinTo = outboundFJ.connectedBody;											//get the initial RB that this is connected to
+			joinedToBoardingArm = joinTo.gameObject.GetComponent <BoardingArm>();
+			if (joinedToBoardingArm) {joinedToBoardingArm.SetJoinedTo (outboundFJ);}	//let that GO know we are connected to it						
 		}
-		incomingTrain = platform.GetComponent <Platform> ().incomingTrain;
+		platform = GetComponentInParent <Platform> ();
 	}
 
 	void FixedUpdate() {
+		incomingTrain = platform.incomingTrain;
 		if (incomingTrain && incomingTrain.status == Train.TrainStatus.BoardingTime && boarding == false) {
 			myConstantForce.enabled = true;
 			boarding = true;
+			//TODO the following should be done once something has decided train is ready to depart... Platform? After wait time.
+		} else if (incomingTrain && incomingTrain.status == Train.TrainStatus.Moving && boarding == true) {
+			Reset ();
 		}
 	}
 
 	void Reset() {
-
+		myConstantForce.enabled = false;
+		boarding = false;
+		transform.position = originalPos;
+		if (!outboundFJ) {	//if fixed joint was destroyed recreate it
+			outboundFJ = gameObject.AddComponent <FixedJoint> ();
+			outboundFJ.connectedBody = joinTo;
+		}
 	}
 
 	void OnCollisionEnter(Collision coll) {
-		if (coll.gameObject.tag == "PlatformBumper" || coll.gameObject.GetComponentInParent <Train>()) {
-			rb.constraints = RigidbodyConstraints.FreezeAll;
-			myConstantForce.enabled = false;
-			if (fixedJoint) {
-				fixedJoint.connectedBody = null;
-			}
+		if (coll.gameObject.GetComponentInParent <Train>()) {
+			Component.Destroy (outboundFJ); //if this GO is attached to something disconnect it
+			Component.Destroy (inboundFJ);	//if the GO attached to this one is connected then disconnect it
 		}
+	}
+
+	public void SetJoinedTo(FixedJoint theirFixedJoint) {
+		inboundFJ = theirFixedJoint;
 	}
 }

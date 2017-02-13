@@ -7,8 +7,7 @@ public class Train : MonoBehaviour {
 	//tried doing all this with force but too difficult and also I imagine kinematic would be required
 
 	public float speed = 10f, length;
-	public bool isBoardingTime = false;
-	public enum TrainStatus {BoardingTime,Moving,SetRight,SetLeft,Brake}
+	public enum TrainStatus {Moving,SetRight,SetLeft,Brake,BoardingTime}
 	public TrainStatus status{ get; private set; }
 
 	private Rigidbody rb;
@@ -45,8 +44,7 @@ public class Train : MonoBehaviour {
 			}
 			break;
 		case TrainStatus.BoardingTime:
-//			newVelocity.x = 0f;		//Shutting down any movement, could still be rotation. TODO: may be better to just constrain Trains
-//			break;
+			break;
 		default:
 			return;
 		}
@@ -63,6 +61,10 @@ public class Train : MonoBehaviour {
 				totalStoppingDistance = coll.bounds.max.x-startPosX; //end of signal trigger - position of front of train
 			}
 		}
+	}
+
+	public void DepartPlatform() {
+		status = TrainStatus.SetRight;
 	}
 
 }

@@ -23,7 +23,7 @@ public class Platform : MonoBehaviour {
 	void RecalculateWaitLocations() {
 		waitLocations.Clear ();
 		Door[] doors = incomingTrain.GetComponentsInChildren <Door> ();
-		Vector3 doorOffset = new Vector3 (0f,0.5f,-2f);//messy addition of -0.1f to xOffset to acount for trigger time telling train to slow
+		Vector3 doorOffset = new Vector3 (0f, 0.5f, -2f);
 		foreach (Door door in doors) {
 			doorOffset.x = door.gameObject.transform.localPosition.x;
 			Vector3 newWait = GetComponentInChildren<Signal>().gameObject.GetComponent <BoxCollider> ().bounds.max + doorOffset;
