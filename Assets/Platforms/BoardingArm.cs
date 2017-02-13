@@ -4,8 +4,6 @@ using UnityEngine;
 
 public class BoardingArm : MonoBehaviour {
 
-	public float jointBreakingDelay = 0.5f;
-
 	private Rigidbody joinTo;
 	private Platform platform;
 	private ConstantForce myConstantForce;

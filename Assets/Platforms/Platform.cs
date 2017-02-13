@@ -13,6 +13,7 @@ public class Platform : MonoBehaviour {
 	public List<Person> peopleAtPlatform = new List<Person> ();
 
 	private List<Vector3> waitLocations = new List<Vector3>();
+	private float navTargetThreshold = 0.1f;
 
 	void Start () {
 		nextDeparture = "Bristol"; //hard coding
@@ -23,17 +24,25 @@ public class Platform : MonoBehaviour {
 	void RecalculateWaitLocations() {
 		waitLocations.Clear ();
 		Door[] doors = incomingTrain.GetComponentsInChildren <Door> ();
-		Vector3 doorOffset = new Vector3 (0f, 0.5f, -2f);
+		Vector3 newWait;
+		newWait.y = GetComponentInChildren<Signal> ().gameObject.GetComponent <BoxCollider> ().bounds.max.y + 0.5f;
+		newWait.z = transform.position.z;
 		foreach (Door door in doors) {
-			doorOffset.x = door.gameObject.transform.localPosition.x;
-			Vector3 newWait = GetComponentInChildren<Signal>().gameObject.GetComponent <BoxCollider> ().bounds.max + doorOffset;
+			newWait.x = GetComponentInChildren<Signal>().gameObject.GetComponent <BoxCollider> ().bounds.max.x + door.gameObject.transform.localPosition.x;
 			waitLocations.Add (newWait);
 		}
-
 	}
 
 	public Vector3 GetRandomWaitLocation() {
 		return waitLocations [Random.Range (0, waitLocations.Count)];
+	}
+
+	public float GetNavTargetThreshold() {
+		return navTargetThreshold * peopleAtPlatform.Count;
+	}
+
+	public void RegisterPerson(Person person) {
+		peopleAtPlatform.Add (person);
 	}
 
 	void OnDrawGizmos() {
