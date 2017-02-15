@@ -39,7 +39,7 @@ public class Platform : MonoBehaviour {
 		Door[] doors = incomingTrain.GetComponentsInChildren <Door> ();
 		Vector3 newTarget;
 		newTarget.y = platformSignalBounds.max.y + 0.5f;
-		newTarget.z = platformSignalBounds.center.z;
+		newTarget.z = platformSignalBounds.center.z - 2f;
 		foreach (Door door in doors) {
 			newTarget.x = platformSignalBounds.max.x + door.gameObject.transform.localPosition.x;
 			targetLocations.Add (newTarget);
@@ -78,10 +78,12 @@ public class Platform : MonoBehaviour {
 	}
 
 	void OnDrawGizmos() {
-		if (targetLocations.Count > 0) {
-			Gizmos.color = Color.green;
-			foreach (Vector3 targetLocation in targetLocations) {
-				Gizmos.DrawWireSphere (targetLocation, 1f);
+		if (targetLocations !=null) {
+			if (targetLocations.Count > 0) {
+				Gizmos.color = Color.green;
+				foreach (Vector3 targetLocation in targetLocations) {
+					Gizmos.DrawWireSphere (targetLocation, 1f);
+				}
 			}
 		}
 		if (waitLocations.Count > 0) {

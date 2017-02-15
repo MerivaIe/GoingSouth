@@ -7,7 +7,7 @@ public class Train : MonoBehaviour {
 	//tried doing all this with force but too difficult and also I imagine kinematic would be required
 
 	public float speed = 10f, length;
-	public enum TrainStatus {Moving,SetRight,SetLeft,Brake,BoardingTime}
+	public enum TrainStatus {Moving,SetRight,SetLeft,Brake,BoardingTime,SettingOff}
 	public TrainStatus status{ get; private set; }
 
 	private Rigidbody rb;
@@ -40,15 +40,20 @@ public class Train : MonoBehaviour {
 		case TrainStatus.Brake:
 			newVelocity.x = Mathf.Lerp (startVelocityX, 0f, (transform.position.x - startPosX) / totalStoppingDistance);	//reduce velocity gradually to zero
 			if (newVelocity.x <= 0.0001f) {
+				rb.constraints |= RigidbodyConstraints.FreezePositionX;	//Set freeze x position
 				status = TrainStatus.BoardingTime;
 			}
 			break;
 		case TrainStatus.BoardingTime:
 			break;
+		case TrainStatus.SettingOff:
+			rb.constraints &= ~ RigidbodyConstraints.FreezePositionX;	//Remove freeze x position
+			//some velocity?
+			break;
 		default:
 			return;
 		}
-		rb.velocity = newVelocity;				//TODO: make sure that this does not cause jitter as the trains are non-kinematic and setting every FixedUpdate could be bad
+		rb.velocity = newVelocity;
 	}
 		
 	void OnTriggerEnter(Collider coll) {

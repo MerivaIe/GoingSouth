@@ -7,6 +7,7 @@ using UnityEngine.AI;
 [RequireComponent(typeof(NavMeshAgent))]
 public class Person : MonoBehaviour {
 
+	public bool testMode = false;
 	/// <summary>
 	/// PersonStatus: MovingToPlatform=nmAgent control to centre of platform | WrongPlatform=nmAgent control to waiting area | MovingToDoor=nmAgent control to one door location | Boarding=physics control avoidance of others
 	/// </summary>
@@ -14,7 +15,7 @@ public class Person : MonoBehaviour {
 	public PersonStatus status; 
 	public string destination{ get; private set; }
 	public Platform currentPlatform;
-	public float  centreOfMassYOffset = -0.5f, sqrMagDeathVelocity = 1f, boardingForce = 2f;
+	public float  centreOfMassYOffset = -0.5f, sqrMagDeathVelocity = 1f, boardingForce = 20f, dragBase = 20f, targetThreshold = 2f;
 
 	private NavMeshAgent nmAgent;
 	private Rigidbody rb;
@@ -25,16 +26,31 @@ public class Person : MonoBehaviour {
 		nmAgent = GetComponent <NavMeshAgent>();
 		destination = "Bristol";
 		rb.centerOfMass = new Vector3(0f,centreOfMassYOffset,0f);
+		if (testMode) {
+			nmAgent.SetDestination(currentPlatform.transform.position);
+		}
 	}
 
 	void FixedUpdate() {
 		if (currentPlatform && currentPlatform.incomingTrain.status == Train.TrainStatus.BoardingTime) {
-			if (status == PersonStatus.ReadyToBoard) {
+			switch (status) {
+			case PersonStatus.ReadyToBoard:
 				SetAgentControl (false);
-				trainTarget = GetNewTarget ();
+				SetNewTarget ();
 				status = PersonStatus.Boarding;
-			} else if (status == PersonStatus.Boarding) {
-				rb.AddForce (boardingForce * (trainTarget - transform.position));
+				//free up their wait space? no... I guess people arriving will board straight away [think]
+				break;
+			case PersonStatus.Boarding:
+				Vector3 boardingVector = trainTarget - transform.position;
+				if (boardingVector.magnitude < targetThreshold) {	//if within a metre of door then shift target into train
+					boardingVector.z += 2f;
+				}
+				boardingVector.y = 0f;
+				float angleDiff = Mathf.Deg2Rad * Vector3.Angle (rb.velocity, boardingVector);	// provide a bit of drag to prevent oscillation around boarding vector
+				float dragModifier = Mathf.Sin (0.5f * angleDiff);
+				rb.drag = dragModifier * dragBase;
+				rb.AddForce (boardingForce * boardingVector.normalized, ForceMode.Acceleration);
+				break;
 			}
 		}
 		//if they have been waiting for more than 5 seconds they get a nearby location and move.
@@ -67,12 +83,10 @@ public class Person : MonoBehaviour {
 
 	void OnTriggerExit(Collider coll) {
 		Platform platform = coll.gameObject.GetComponent<Platform> ();
-		if (platform == currentPlatform) {
+		if (currentPlatform && platform == currentPlatform) {
 			UnregisterWithPlatform ();
 		}
 	}
-		
-	//TODO perhaps some OnTriggerExit stuff when leaving platform... make this all abit simpler
 
 	void SetAgentControl(bool turnOn) {
 		if (rb.isKinematic != turnOn) {	//ignore request if they are already set to requested bool
@@ -81,15 +95,17 @@ public class Person : MonoBehaviour {
 		}
 	}
 
-	Vector3 GetNewTarget() {
-		Vector3 shortestRoute = currentPlatform.targetLocations[0] - transform.position;
+	void SetNewTarget() {
+		float shortestRoute = (currentPlatform.targetLocations[0] - transform.position).magnitude;
+		int closestTargetIndex = 0;
 		for (int i=1;i<currentPlatform.targetLocations.Count;i++) {
-			Vector3 route = currentPlatform.targetLocations [i] - transform.position;
-			if (route.magnitude < shortestRoute.magnitude) {
-				shortestRoute = route;
+			float routeToTarget = (currentPlatform.targetLocations [i] - transform.position).magnitude;
+			if (routeToTarget < shortestRoute) {
+				shortestRoute = routeToTarget;
+				closestTargetIndex = i;
 			}
 		}
-		return shortestRoute;
+		trainTarget = currentPlatform.targetLocations[closestTargetIndex];
 	}
 
 	void DeathKnell() {
@@ -102,6 +118,7 @@ public class Person : MonoBehaviour {
 	{
 		currentPlatform.RegisterPerson (this);
 		platformTarget = currentPlatform.GetNewWaitLocation ();
+		nmAgent.speed /= 2f;
 		nmAgent.SetDestination (platformTarget);
 	}
 
