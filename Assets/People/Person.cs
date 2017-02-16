@@ -15,14 +15,14 @@ public class Person : MonoBehaviour {
 	public PersonStatus status; 
 	public string destination{ get; private set; }
 	public Platform currentPlatform;
-	public float  centreOfMassYOffset = -0.5f, sqrMagDeathVelocity = 1f, boardingForce = 20f, dragBase = 20f, targetThreshold = 2f, checkProximityEvery = 0.5f;
+	public float  centreOfMassYOffset = -0.5f, sqrMagDeathVelocity = 1f, boardingForce = 20f, dragBase = 20f, targetThreshold = 2f, checkProximityEvery = 0.5f,proximityDistance = 0.5f, nextProximityCheck = 0f;
 
 	private NavMeshAgent nmAgent;
 	private NavMeshObstacle nmObstacle;
 	private Rigidbody rb;
 	private Vector3 platformTarget, trainTarget;
 	private static float[] proximityAngles;
-	public float proximityDistance = 0.5f, nextProximityCheck = 0f;
+	private float defaultSpeed;
 	private bool boardWithVelocity = true;
 
 	void Start () {
@@ -30,6 +30,7 @@ public class Person : MonoBehaviour {
 		nmAgent = GetComponent <NavMeshAgent>();
 		nmObstacle = GetComponent <NavMeshObstacle> ();
 		destination = "Bristol";
+		defaultSpeed = nmAgent.speed;
 		rb.centerOfMass = new Vector3(0f,centreOfMassYOffset,0f);
 		if (testMode) {
 			nmAgent.SetDestination(currentPlatform.transform.position);
@@ -50,14 +51,16 @@ public class Person : MonoBehaviour {
 	}
 
 	void FixedUpdate() {
-		if (currentPlatform && currentPlatform.incomingTrain.status == Train.TrainStatus.BoardingTime) {
-			switch (status) {
+		switch (status) {
 			case PersonStatus.ReadyToBoard:
-				nmAgent.speed *= 2f;
-				SetAgentControl (false);
-				SetNewTarget ();
-				status = PersonStatus.MovingToDoor;
-				//free up their wait space? no... I guess people arriving will board straight away [think]
+				if (currentPlatform && currentPlatform.incomingTrain.status == Train.TrainStatus.BoardingTime) {
+					nmAgent.speed = defaultSpeed;
+					SetAgentControl (false);
+					SetNewTarget ();
+					status = PersonStatus.MovingToDoor;
+					//free up their wait space? no... I guess people arriving will board straight away [think]
+				}
+			///else if we are just waiting for train to arrive then use physics control to nudge towards our target
 				break;
 			case PersonStatus.MovingToDoor:
 				Vector3 boardingVector = trainTarget - transform.position;
@@ -86,12 +89,13 @@ public class Person : MonoBehaviour {
 				MoveUsingForce (boardingVector);
 				break;
 			case PersonStatus.Boarded:
+				rb.ResetCenterOfMass ();
 				rb.constraints = RigidbodyConstraints.None;
+			//maybe add some slight corrective rotation to try stay upright if feet are on ground
 				break;
-			}
+			//if they have been waiting for more than 5 seconds they get a nearby location and move. or just shuffle their looking at.
+			//actually, to ensure that people can be shoved off the platform we should make it physics control trying to reach their assigned destination (and maybe add a NM Obstacle so agents know to avoid them).
 		}
-		//if they have been waiting for more than 5 seconds they get a nearby location and move.
-		//actually, to ensure that people can be shoved off the platform we should make it physics control trying to reach their assigned destination (and maybe add a NM Obstacle so agents know to avoid them).
 	}
 
 	void OnTriggerEnter(Collider coll) {
@@ -101,6 +105,7 @@ public class Person : MonoBehaviour {
 				status = PersonStatus.Compromised;
 				DeathKnell ();
 			} else if (coll.gameObject.GetComponent <Train> ()) {	//if this is the trigger inside the train carriage
+
 				status = PersonStatus.Boarded;
 			} else {
 				Platform platform = coll.gameObject.GetComponent<Platform> ();
@@ -108,7 +113,7 @@ public class Person : MonoBehaviour {
 					currentPlatform = platform;
 					if (destination == currentPlatform.nextDeparture) {
 						RegisterWithPlatform ();
-						nmAgent.speed *= 0.5f;
+						nmAgent.speed = 0.5f * defaultSpeed;
 						nmAgent.SetDestination (platformTarget);
 						status = PersonStatus.ReadyToBoard;
 					} else {
@@ -179,7 +184,6 @@ public class Person : MonoBehaviour {
 	{
 		currentPlatform.RegisterPerson (this);
 		platformTarget = currentPlatform.GetNewWaitLocation ();
-
 	}
 
 	void UnregisterWithPlatform() {
