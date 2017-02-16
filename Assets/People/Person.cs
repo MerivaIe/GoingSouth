@@ -70,7 +70,7 @@ public class Person : MonoBehaviour {
 					if (boardWithVelocity) {
 						rb.drag = 0f;
 						rb.velocity = nmAgent.speed * boardingVector.normalized;
-						Quaternion.LookRotation (boardingVector);
+						transform.rotation = Quaternion.LookRotation (boardingVector);
 						break;
 					}
 				} else {											//if within a metre of door then shift target into train and set Boarding flag
@@ -145,7 +145,7 @@ public class Person : MonoBehaviour {
 		float dragModifier = Mathf.Sin (0.5f * angleDiff);
 		rb.drag = dragModifier * dragBase;
 		rb.AddForce (boardingForce * boardingVector.normalized, ForceMode.Acceleration);
-		Quaternion.LookRotation (boardingVector);
+		transform.rotation = Quaternion.LookRotation (boardingVector);
 	}
 
 	void SetAgentControl(bool turnOn) {
