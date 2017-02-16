@@ -9,7 +9,7 @@ public class Gentry : MonoBehaviour {
 
 	public float checkProximityEvery = 1f,jostlingStrength = 0.25f;
 
-	private Vector3[] proximityDirections = new Vector3[8];
+	private static Vector3[] proximityDirections = new Vector3[8];
 	private float nextProximityCheck, proximityDistance;
 	private Person person;
 	private Rigidbody rb;
@@ -17,8 +17,11 @@ public class Gentry : MonoBehaviour {
 	void Start () {
 		person = GetComponent <Person> ();
 		rb = GetComponent <Rigidbody> ();
-		for (int i=0;i<proximityDirections.Length;i++) {
-			proximityDirections [i] = new Vector3 (Mathf.Cos (i*Mathf.PI/4f),0f,Mathf.Sin (i*Mathf.PI/4f));		//using square wave function to calculate 8 directions at compass points
+		if (proximityDirections != null) {
+			proximityDirections = new Vector3[8];
+			for (int i = 0; i < proximityDirections.Length; i++) {	//to take this even further you should work out the angle (pi/4 is specific to 8 lines)- nd take in the total angle of fan (in this case 360)
+				proximityDirections [i] = new Vector3 (Mathf.Cos (i * Mathf.PI / 4f), 0f, Mathf.Sin (i * Mathf.PI / 4f));		//using square wave function to calculate 8 directions at compass points
+			}
 		}
 	}
 
