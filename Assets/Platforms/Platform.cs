@@ -12,7 +12,7 @@ public class Platform : MonoBehaviour {
 	public float waitSpacing = 1f;
 	public string nextDeparture { get; private set; }
 	public Train incomingTrain { get; private set; }
-	public List<Vector3> targetLocations {get; private set;}
+	public List<Vector3> doorLocations {get; private set;}
 
 	private List<Person> peopleAtPlatform = new List<Person> ();
 	private List<Vector3> waitLocations = new List<Vector3> ();
@@ -24,7 +24,7 @@ public class Platform : MonoBehaviour {
 		nextDeparture = "Bristol"; //hard coding
 		incomingTrain = GameManager.GetDeparture (nextDeparture);
 
-		targetLocations = new List<Vector3> ();
+		doorLocations = new List<Vector3> ();
 		RecalculateTargetLocations ();
 		CalculateNewWaitLocations ();
 	}
@@ -35,14 +35,14 @@ public class Platform : MonoBehaviour {
 	}
 
 	void RecalculateTargetLocations() {
-		targetLocations.Clear ();
+		doorLocations.Clear ();
 		Door[] doors = incomingTrain.GetComponentsInChildren <Door> ();
 		Vector3 newTarget;
 		newTarget.y = platformSignalBounds.max.y + 0.5f;
 		newTarget.z = platformSignalBounds.center.z - 2f;
 		foreach (Door door in doors) {
 			newTarget.x = platformSignalBounds.max.x + door.gameObject.transform.localPosition.x;
-			targetLocations.Add (newTarget);
+			doorLocations.Add (newTarget);
 		}
 	}
 
@@ -78,10 +78,10 @@ public class Platform : MonoBehaviour {
 	}
 
 	void OnDrawGizmos() {
-		if (targetLocations !=null) {
-			if (targetLocations.Count > 0) {
+		if (doorLocations !=null) {
+			if (doorLocations.Count > 0) {
 				Gizmos.color = Color.green;
-				foreach (Vector3 targetLocation in targetLocations) {
+				foreach (Vector3 targetLocation in doorLocations) {
 					Gizmos.DrawWireSphere (targetLocation, 1f);
 				}
 			}

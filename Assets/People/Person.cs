@@ -36,17 +36,19 @@ public class Person : MonoBehaviour {
 			nmAgent.SetDestination(currentPlatform.transform.position);
 		}
 		if (proximityAngles == null) {
-			CreateProximityAngles (5,Mathf.PI/2);
+			CreateProximityAngles (5,Mathf.PI/2f);
 		}
 	}
 
+	//TODO alternative way of forming this would be just referring directly to forward, right + forward, and -right + forward
 	void CreateProximityAngles (int directionCount, float fanAngleInRadians)
 	{
 		proximityAngles = new float[directionCount];
 		int midPoint = Mathf.FloorToInt (directionCount / 2);
-		float angleBetweenDirections = fanAngleInRadians / directionCount;
+		float angleBetweenDirections = fanAngleInRadians / (directionCount-1);
 		for (int i = 0; i < directionCount; i++) {
 			proximityAngles [i] = (i - midPoint) * angleBetweenDirections;
+			Debug.Log ("Proximity angles... Index: " + i.ToString () + " AngleValue: " + proximityAngles[i].ToString () + " Sin/Cos(0): " + Mathf.Sin (proximityAngles[i]) + "|" + Mathf.Cos (proximityAngles[i]));
 		}
 	}
 
@@ -56,15 +58,17 @@ public class Person : MonoBehaviour {
 				if (currentPlatform && currentPlatform.incomingTrain.status == Train.TrainStatus.BoardingTime) {
 					nmAgent.speed = defaultSpeed;
 					SetAgentControl (false);
-					SetNewTarget ();
+					SetDoorTarget ();
 					status = PersonStatus.MovingToDoor;
 					//free up their wait space? no... I guess people arriving will board straight away [think]
+				} else {
+					//else if we are just waiting for train to arrive then use physics control to nudge towards our target
 				}
-			///else if we are just waiting for train to arrive then use physics control to nudge towards our target
 				break;
 			case PersonStatus.MovingToDoor:
 				Vector3 boardingVector = trainTarget - transform.position;
 				boardingVector.y = 0f;
+				transform.rotation = Quaternion.LookRotation (boardingVector);
 				if (boardingVector.magnitude > targetThreshold) {	//if still far from door
 					if (Time.time > nextProximityCheck) {			//check proximity periodically to set boarding by velocity or by force
 						boardWithVelocity = !IsForwardClear ();
@@ -73,7 +77,6 @@ public class Person : MonoBehaviour {
 					if (boardWithVelocity) {
 						rb.drag = 0f;
 						rb.velocity = nmAgent.speed * boardingVector.normalized;
-						transform.rotation = Quaternion.LookRotation (boardingVector);
 						break;
 					}
 				} else {											//if within a metre of door then shift target into train and set Boarding flag
@@ -105,7 +108,6 @@ public class Person : MonoBehaviour {
 				status = PersonStatus.Compromised;
 				DeathKnell ();
 			} else if (coll.gameObject.GetComponent <Train> ()) {	//if this is the trigger inside the train carriage
-
 				status = PersonStatus.Boarded;
 			} else {
 				Platform platform = coll.gameObject.GetComponent<Platform> ();
@@ -133,12 +135,11 @@ public class Person : MonoBehaviour {
 
 	bool IsForwardClear ()
 	{
+		Debug.DrawRay (transform.position,transform.forward,Color.yellow,0.5f);
 		foreach (float angle in proximityAngles) {
-			Vector3 direction = transform.forward;
-			direction.x += Mathf.Sin (angle);
-			direction.z += Mathf.Cos (angle);
-			Debug.DrawRay (transform.position, direction, Color.green, 0.5f);
-			if (Physics.Raycast (transform.position,direction, proximityDistance,LayerMask.NameToLayer ("People"))) {
+			Vector3 direction = transform.forward * Mathf.Cos (angle) + transform.right * Mathf.Sin (angle);
+			Debug.DrawRay (transform.position, direction.normalized * proximityDistance, Color.green, 0.5f);
+			if (Physics.Raycast (transform.position,direction.normalized, proximityDistance,LayerMask.NameToLayer ("People"))) {
 				return true;
 			}
 		}
@@ -150,7 +151,6 @@ public class Person : MonoBehaviour {
 		float dragModifier = Mathf.Sin (0.5f * angleDiff);
 		rb.drag = dragModifier * dragBase;
 		rb.AddForce (boardingForce * boardingVector.normalized, ForceMode.Acceleration);
-		transform.rotation = Quaternion.LookRotation (boardingVector);
 	}
 
 	void SetAgentControl(bool turnOn) {
@@ -161,17 +161,17 @@ public class Person : MonoBehaviour {
 		}
 	}
 
-	void SetNewTarget() {
-		float shortestRoute = (currentPlatform.targetLocations[0] - transform.position).magnitude;
+	void SetDoorTarget() {
+		float shortestRoute = (currentPlatform.doorLocations[0] - transform.position).magnitude;
 		int closestTargetIndex = 0;
-		for (int i=1;i<currentPlatform.targetLocations.Count;i++) {
-			float routeToTarget = (currentPlatform.targetLocations [i] - transform.position).magnitude;
+		for (int i=1;i<currentPlatform.doorLocations.Count;i++) {
+			float routeToTarget = (currentPlatform.doorLocations [i] - transform.position).magnitude;
 			if (routeToTarget < shortestRoute) {
 				shortestRoute = routeToTarget;
 				closestTargetIndex = i;
 			}
 		}
-		trainTarget = currentPlatform.targetLocations[closestTargetIndex];
+		trainTarget = currentPlatform.doorLocations[closestTargetIndex];
 	}
 
 	void DeathKnell() {
@@ -190,6 +190,4 @@ public class Person : MonoBehaviour {
 		currentPlatform.UnregisterPerson (this);
 		//send nmAgent back to waiting area or something?
 	}
-		
-
 }

@@ -7,79 +7,88 @@ public class Train : MonoBehaviour {
 	//tried doing all this with force but too difficult and also I imagine kinematic would be required
 
 	public float speed = 10f, length, boardingTime = 10f;
-	public enum TrainStatus {Moving,SetRight,SetLeft,Brake,BoardingTime,SettingOff}
+	public enum TrainStatus {Moving,Braking,BoardingTime,Accelerating,Idle}
 	public TrainStatus status{ get; private set; }
+	public Vector3 direction;
 
 	private Rigidbody rb;
-	private float totalStoppingDistance, startPosX, startVelocityX, boardingEndTime;
+	private float totalDistance, startPosX, startSpeedX;
 	private Animator animator;
 
 	void Start () {
 		rb = GetComponent <Rigidbody> ();
 		length = 20f; //TODO hard coded
 		animator = GetComponent <Animator>();
+		status = TrainStatus.Idle;
 	}
 
 	void FixedUpdate () {
-		//Deciding direction of motion
-		if (transform.position.x < -50f) {
-			status = TrainStatus.SetRight;
-		} else if (transform.position.x > 50f) {
-			//status = TrainStatus.SetLeft;
-		}
-
 		Vector3 newVelocity = rb.velocity;
-		//Executing direction of motion
-		switch (status) {
-		case TrainStatus.SetRight:
-			newVelocity = Vector3.right * speed;
-			status = TrainStatus.Moving;
-			break;
-		case TrainStatus.SetLeft:
-			newVelocity = Vector3.left * speed;
-			status = TrainStatus.Moving;
-			break;
-		case TrainStatus.Brake:
-			newVelocity.x = Mathf.Lerp (startVelocityX, 0f, (transform.position.x - startPosX) / totalStoppingDistance);	//reduce velocity gradually to zero
-			if (newVelocity.x <= 0.0001f) {
+
+		switch (status) {	//both of these rely on startSpeedX set at the point this status is set
+		case TrainStatus.Braking:				
+			if (rb.velocity.x <= 0.0001f) {								//if we have stopped then open doors
 				rb.constraints |= RigidbodyConstraints.FreezePositionX;	//Set freeze x position
-				animator.SetTrigger ("doorOpen");
-				status = TrainStatus.BoardingTime;
-				boardingEndTime = Time.time + boardingTime;
+				OpenDoors ();
+			} else {													//otherwise we are braking: reduce velocity gradually to zero
+				newVelocity.x = SmoothlyAccelerateToTargetSpeed (0f);	//TODO: need to apply direction to this??
 			}
 			break;
-		case TrainStatus.BoardingTime:
-			if (Time.time > boardingEndTime) {
-				animator.SetTrigger ("doorClose");
-				status = TrainStatus.SettingOff;
+		case TrainStatus.Accelerating:
+			if (rb.velocity.x >= speed) {
+				status = TrainStatus.Moving;
+			} else {
+				newVelocity.x = SmoothlyAccelerateToTargetSpeed (speed);
+				//potentially Mathf.SmoothDamp( should be used for this
 			}
 			break;
-		case TrainStatus.SettingOff:
-			//maybe check if doors in idela nimation and then set off
-			rb.constraints &= ~ RigidbodyConstraints.FreezePositionX;	//Remove freeze x position (and let the carriage drift slightly)
-			//some velocity?
-			Invoke("DepartPlatform",3f);
+		case TrainStatus.Idle:
+			if (transform.position.x < -50f) {	//temp code to provide constant velocity when out of station
+				direction = Vector3.right;
+				startSpeedX = direction.x * 0.1f;
+				startPosX = transform.position.x;
+				totalDistance = length;
+				status = TrainStatus.Accelerating;
+			}
 			break;
-		default:
-			return;
 		}
 		rb.velocity = newVelocity;
 	}
-		
-	void OnTriggerEnter(Collider coll) {
-		Signal signal = coll.GetComponent <Signal>();
-		if (signal) {
-			if (signal.signalType == Signal.SignalType.Brake) {
-				status = TrainStatus.Brake;
-				startVelocityX = rb.velocity.x;
-				startPosX = transform.position.x;
-				totalStoppingDistance = coll.bounds.max.x-startPosX; //end of signal trigger - position of front of train
-			}
-		}
+
+	float SmoothlyAccelerateToTargetSpeed (float targetSpeed)	//this is not actually linear because interval is dependent on distance
+	{
+		return Mathf.Lerp (startSpeedX, targetSpeed, direction.x * (transform.position.x - startPosX) / totalDistance);
 	}
 
-	public void DepartPlatform() {
-		status = TrainStatus.SetRight;
+	public void SetBraking (float stoppingPosX)
+	{
+		startSpeedX = rb.velocity.x;
+		startPosX = transform.position.x;
+		totalDistance =  stoppingPosX - startPosX;	//end of signal trigger - position of front of train
+		status = TrainStatus.Braking;
+	}
+
+	void OpenDoors ()
+	{
+		animator.SetTrigger ("doorOpen");
+		Invoke ("SetBoardingTime", animator.GetCurrentAnimatorStateInfo (0).length);
+	}
+	
+	void SetBoardingTime() {
+		status = TrainStatus.BoardingTime;
+		Invoke ("CloseDoors", boardingTime);
+	}
+
+	void CloseDoors() {
+		animator.SetTrigger ("doorClose");
+		rb.constraints &= ~RigidbodyConstraints.FreezePositionX;	//Remove freeze x position (and let the carriage drift slightly)
+		rb.velocity = -0.01f * speed * direction;
+		Invoke ("Depart", 2f);
+	}
+
+	void Depart() {
+		startSpeedX = direction.x * 0.1f;
+		status = TrainStatus.Accelerating;
 	}
 
 }
