@@ -53,61 +53,62 @@ public class Person : MonoBehaviour {
 	}
 
 	void FixedUpdate() {
-		switch (status) {
-			case PersonStatus.ReadyToBoard:
-				if (currentPlatform && currentPlatform.incomingTrain.status == Train.TrainStatus.BoardingTime) {
+		if (currentPlatform && currentPlatform.incomingTrain.status == Train.TrainStatus.BoardingTime) {
+			switch (status) {
+				case PersonStatus.ReadyToBoard:
 					nmAgent.speed = defaultSpeed;
 					SetAgentControl (false);
 					SetDoorTarget ();
 					status = PersonStatus.MovingToDoor;
 					//free up their wait space? no... I guess people arriving will board straight away [think]
-				} else {
-					//else if we are just waiting for train to arrive then use physics control to nudge towards our target
-				}
-				break;
-			case PersonStatus.MovingToDoor:
-				Vector3 boardingVector = trainTarget - transform.position;
-				boardingVector.y = 0f;
-				transform.rotation = Quaternion.LookRotation (boardingVector);
-				if (boardingVector.magnitude > targetThreshold) {	//if still far from door
-					if (Time.time > nextProximityCheck) {			//check proximity periodically to set boarding by velocity or by force
-						boardWithVelocity = !IsForwardClear ();
-						nextProximityCheck = Time.time + checkProximityEvery;
+					break;
+				case PersonStatus.MovingToDoor:
+					Vector3 boardingVector = trainTarget - transform.position;
+					boardingVector.y = 0f;
+					transform.rotation = Quaternion.LookRotation (boardingVector);
+					if (boardingVector.magnitude > targetThreshold) {	//if still far from door
+						if (Time.time > nextProximityCheck) {			//check proximity periodically to set boarding by velocity or by force
+							boardWithVelocity = !IsForwardClear ();
+							nextProximityCheck = Time.time + checkProximityEvery;
+						}
+						if (boardWithVelocity) {
+							rb.drag = 0f;
+							rb.velocity = nmAgent.speed * boardingVector.normalized;
+							break;
+						}
+					} else {											//if within a metre of door then shift target into train and set Boarding flag
+						trainTarget.z += 2f;
+						boardingVector.z += 2f;
+						status = PersonStatus.Boarding;
 					}
-					if (boardWithVelocity) {
-						rb.drag = 0f;
-						rb.velocity = nmAgent.speed * boardingVector.normalized;
-						break;
-					}
-				} else {											//if within a metre of door then shift target into train and set Boarding flag
-					trainTarget.z += 2f;
-					boardingVector.z += 2f;
-					status = PersonStatus.Boarding;
-				}
-				MoveUsingForce (boardingVector);					//if we get to this point then boarding by force is desired
-				break;
-			case PersonStatus.Boarding:
-				boardingVector = trainTarget - transform.position;
-				boardingVector.y = 0f;
-				MoveUsingForce (boardingVector);
-				break;
-			case PersonStatus.Boarded:
-				rb.ResetCenterOfMass ();
-				rb.constraints = RigidbodyConstraints.None;
-			//maybe add some slight corrective rotation to try stay upright if feet are on ground
-				break;
-			//if they have been waiting for more than 5 seconds they get a nearby location and move. or just shuffle their looking at.
-			//actually, to ensure that people can be shoved off the platform we should make it physics control trying to reach their assigned destination (and maybe add a NM Obstacle so agents know to avoid them).
+					MoveUsingForce (boardingVector);					//if we get to this point then boarding by force is desired
+					break;
+				case PersonStatus.Boarding:
+					boardingVector = trainTarget - transform.position;
+					boardingVector.y = 0f;
+					transform.rotation = Quaternion.LookRotation (boardingVector);
+					MoveUsingForce (boardingVector);
+					break;
+				case PersonStatus.Boarded:
+					//maybe add some slight corrective rotation to try stay upright if feet are on ground
+					break;
+				//if they have been waiting for more than 5 seconds they get a nearby location and move. or just shuffle their looking at.
+				//actually, to ensure that people can be shoved off the platform we should make it physics control trying to reach their assigned destination (and maybe add a NM Obstacle so agents know to avoid them).
+			}
+		} else {
+			//else if we are just waiting for train to arrive then use physics control to nudge towards our target
 		}
 	}
 
 	void OnTriggerEnter(Collider coll) {
 		if (status != PersonStatus.Compromised) {
-			Train train = coll.gameObject.GetComponentInParent <Train> ();	//if this is the front of the train
+			Train train = coll.gameObject.GetComponentInParent <Train> ();	//if this is the front of the train, trigger will be in parent transform
 			if (train && train.gameObject.GetComponent <Rigidbody> ().velocity.sqrMagnitude > sqrMagDeathVelocity) {
 				status = PersonStatus.Compromised;
 				DeathKnell ();
-			} else if (coll.gameObject.GetComponent <Train> ()) {	//if this is the trigger inside the train carriage
+			} else if (coll.gameObject.GetComponent <Train> ()) {			//if this is the trigger inside the train carriage
+				rb.ResetCenterOfMass ();
+				rb.constraints = RigidbodyConstraints.None;
 				status = PersonStatus.Boarded;
 			} else {
 				Platform platform = coll.gameObject.GetComponent<Platform> ();
@@ -115,7 +116,7 @@ public class Person : MonoBehaviour {
 					currentPlatform = platform;
 					if (destination == currentPlatform.nextDeparture) {
 						RegisterWithPlatform ();
-						nmAgent.speed = 0.5f * defaultSpeed;
+						//nmAgent.speed = 0.5f * defaultSpeed;
 						nmAgent.SetDestination (platformTarget);
 						status = PersonStatus.ReadyToBoard;
 					} else {

@@ -6,7 +6,7 @@ public class Train : MonoBehaviour {
 
 	//tried doing all this with force but too difficult and also I imagine kinematic would be required
 
-	public float speed = 10f, length, boardingTime = 10f, accelerationMultiplier = 2f;
+	public float speed = 10f, length, boardingTime = 10f, accelerationMultiplier = 4f;
 	public enum TrainStatus {Moving,Braking,BoardingTime,Accelerating,Idle}
 	public TrainStatus status{ get; private set; }
 	public Vector3 direction;
@@ -75,18 +75,21 @@ public class Train : MonoBehaviour {
 	}
 	
 	void SetBoardingTime() {
+		animator.ResetTrigger ("doorOpen");
 		status = TrainStatus.BoardingTime;
 		Invoke ("CloseDoors", boardingTime);
 	}
 
 	void CloseDoors() {
 		animator.SetTrigger ("doorClose");
+		status = TrainStatus.Idle;
 		rb.constraints &= ~RigidbodyConstraints.FreezePositionX;	//Remove freeze x position (and let the carriage drift slightly)
 		rb.velocity = -0.01f * speed * direction;
 		Invoke ("Depart", 2f);
 	}
 
 	void Depart() {
+		animator.ResetTrigger ("doorClose");
 		startSpeedX = direction.x * 0.1f;
 		totalDistance = length * accelerationMultiplier;
 		status = TrainStatus.Accelerating;
