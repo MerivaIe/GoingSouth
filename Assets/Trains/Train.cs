@@ -24,7 +24,6 @@ public class Train : MonoBehaviour {
 
 	void FixedUpdate () {
 		Vector3 newVelocity = rb.velocity;
-
 		switch (status) {	//both of these rely on startSpeedX set at the point this status is set
 		case TrainStatus.Braking:				
 			if (rb.velocity.x <= 0.0001f) {								//if we have stopped then open doors
