@@ -6,7 +6,7 @@ public class Train : MonoBehaviour {
 
 	//tried doing all this with force but too difficult and also I imagine kinematic would be required
 
-	public float speed = 10f, length, boardingTime = 10f;
+	public float speed = 10f, length, boardingTime = 10f, accelerationMultiplier = 2f;
 	public enum TrainStatus {Moving,Braking,BoardingTime,Accelerating,Idle}
 	public TrainStatus status{ get; private set; }
 	public Vector3 direction;
@@ -88,6 +88,7 @@ public class Train : MonoBehaviour {
 
 	void Depart() {
 		startSpeedX = direction.x * 0.1f;
+		totalDistance = length * accelerationMultiplier;
 		status = TrainStatus.Accelerating;
 	}
 
