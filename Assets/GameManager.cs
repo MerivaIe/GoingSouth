@@ -1,37 +1,40 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 
 public class GameManager : MonoBehaviour {
 
-	//TODO I thought I'd need a Tuple here but really should think about what information you need stored together here... do you need a 'global' collection of info or can you retrieve this from individual objects
-	private static Dictionary<string,GameObject> departures = new Dictionary<string,GameObject>();
-	//private static List<Departure> departuresNew = new List<Departure> ();
+	private static List<TimetableItem> timetable = new List<TimetableItem>();
+	private static List<Train> trainPool = new List<Train>();
 
 	void Awake () {
-		GameObject trainGO = GameObject.Find ("Complex Train (1)");
-		departures.Add ("Bristol",trainGO);
+		trainPool = GameObject.FindObjectsOfType<Train>().ToList ();
+		//savagely hard coded link to just one platform and one train at the moment:
+		timetable.Add (new TimetableItem(0f,GameObject.FindObjectOfType <Platform>(),GameObject.Find ("Complex Train (1)").GetComponent <Train>(),"Bristol"));
 	}
 		
-	public static Train GetDeparture(string destination) {
-		GameObject trainGO;
-		if (departures.TryGetValue (destination,out trainGO)) {
-			return trainGO.GetComponent <Train>();
+	public static Train GetNextTrain(Platform platform) {
+		Train train = timetable.FirstOrDefault (a => a.platform == platform).train;
+		if (!train) {
+			Debug.LogWarning("Couldn't find train for the requested platform.");
 		}
-		Debug.LogWarning("Couldn't find train for the requested departure.");
-		return null;
+		return train;
 	}
 
-//	public struct Departure {
-//		GameObject train, platform;
-//		string destination;
-//		Color color;
-//		public Departure (GameObject _train, GameObject _platform, string _destination) {
-//			train = _train;
-//			platform = _platform;
-//			destination = _destination;
-//			color = Color.red;
-//			//select color randomly from set that haven't already been picked??
-//		}
-//	}
+	/// <summary>
+	/// ATM: centralised data repository.
+	/// </summary>
+	public struct TimetableItem {
+		public float scheduledArrivalTime;
+		public Platform platform;
+		public Train train;
+		public string destination;
+		public TimetableItem(float _schedArrivalTime, Platform _platform, Train _train, string _destination) {
+			scheduledArrivalTime = _schedArrivalTime;
+			platform = _platform;
+			train = _train;
+			destination = _destination;
+		}
+	}
 }

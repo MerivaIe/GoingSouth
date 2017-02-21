@@ -7,7 +7,8 @@ public class Train : MonoBehaviour {
 	public float speed = 10f, length, boardingTime = 10f, accelerationMultiplier = 4f;
 	public enum TrainStatus {Moving,Braking,BoardingTime,Accelerating,Idle}
 	public TrainStatus status{ get; private set; }
-	public Vector3 direction;
+	public Vector3 direction;	//this should eventually be replaced with just transform.forward everywhere
+	public Color color;
 
 	private Rigidbody rb;
 	private float totalDistance, startPosX, startSpeedX;
@@ -15,9 +16,10 @@ public class Train : MonoBehaviour {
 
 	void Start () {
 		rb = GetComponent <Rigidbody> ();
-		length = 20f; //TODO hard coded
+		length = 20f; 				//TODO hard coded
 		animator = GetComponent <Animator>();
 		status = TrainStatus.Idle;
+		//select color randomly from set of remaining?
 	}
 
 	void FixedUpdate () {

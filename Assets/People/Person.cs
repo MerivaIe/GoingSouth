@@ -29,7 +29,7 @@ public class Person : MonoBehaviour {
 		rb = GetComponent <Rigidbody> ();
 		nmAgent = GetComponent <NavMeshAgent>();
 		nmObstacle = GetComponent <NavMeshObstacle> ();
-		destination = "Bristol";
+		destination = "Bristol";	//TODO hard coded
 		if (testMode) {
 			nmAgent.SetDestination(currentPlatform.transform.position);
 		}
@@ -127,6 +127,7 @@ public class Person : MonoBehaviour {
 			}
 		}
 	}
+	//need to unregister everyone once the train leaves
 
 //	void OnTriggerExit(Collider coll) {
 //		Platform platform = coll.gameObject.GetComponent<Platform> ();

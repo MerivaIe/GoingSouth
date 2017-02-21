@@ -20,7 +20,7 @@ public class Platform : MonoBehaviour {
 		platformTriggerBounds = GetComponent <BoxCollider>().bounds;
 		platformSignalBounds = GetComponentInChildren<Signal> ().gameObject.GetComponent <BoxCollider> ().bounds;
 		nextDeparture = "Bristol"; //hard coding
-		incomingTrain = GameManager.GetDeparture (nextDeparture);
+		incomingTrain = GameManager.GetNextTrain (this);
 
 		doorLocations = new List<Vector3> ();
 		RecalculateTargetLocations ();
