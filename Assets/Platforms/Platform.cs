@@ -6,16 +6,14 @@ using UnityEngine.AI;
 
 public class Platform : MonoBehaviour {
 
-	//atm I envision Platform as fairly dumb, just holding next train details so People can query and get ready
-	//and leaving the overall logic to GameManager who has knowledge of all platforms
-
+	[Tooltip("MUST SET THIS MANUALLY AS NAVMESH API IS LACKING")]
+	public float nmAgentRadius = 0.5f;
 	public float waitSpacing = 1f;
 	public string nextDeparture { get; private set; }
 	public Train incomingTrain { get; private set; }
 	public List<Vector3> doorLocations {get; private set;}
 
-	private List<Person> peopleAtPlatform = new List<Person> ();
-	private List<Vector3> waitLocations = new List<Vector3> ();
+	private List<WaitLocation> waitLocations = new List<WaitLocation> ();
 	private Bounds platformTriggerBounds, platformSignalBounds;
 
 	void Start () {
@@ -27,11 +25,6 @@ public class Platform : MonoBehaviour {
 		doorLocations = new List<Vector3> ();
 		RecalculateTargetLocations ();
 		CalculateNewWaitLocations ();
-	}
-	void Update() {
-		if (Input.GetMouseButtonDown (0)) {
-			CalculateNewWaitLocations ();
-		}
 	}
 
 	void RecalculateTargetLocations() {
@@ -46,35 +39,36 @@ public class Platform : MonoBehaviour {
 		}
 	}
 
-	void CalculateNewWaitLocations(){
-		PoissonDiscSampler sampler = new PoissonDiscSampler (platformTriggerBounds.size.x, platformTriggerBounds.size.z, waitSpacing);
+	void CalculateNewWaitLocations(){	// a nice way of doing this would be to store old locations generated and workaround them
+		PoissonDiscSampler sampler = new PoissonDiscSampler (platformTriggerBounds.size.x - 2*nmAgentRadius, platformTriggerBounds.size.z - 2*nmAgentRadius, waitSpacing);
 		foreach (Vector2 sample in sampler.Samples()) {
 			Vector3 waitLocation = platformTriggerBounds.min;	//place at the '0,0' location for the generated grid
-			waitLocation.x += sample.x;
-			waitLocation.z += sample.y;
-			NavMeshHit hit;
+			waitLocation.x += sample.x + nmAgentRadius;
+			waitLocation.z += sample.y + nmAgentRadius;
+			NavMeshHit hit;										//using SamplePosition to make absolutely sure the wait location we have generated ends up on the navmesh
 			if (NavMesh.SamplePosition (waitLocation, out hit, 0.5f, NavMesh.AllAreas)) {
-				waitLocations.Add (hit.position);
+				waitLocations.Add (new WaitLocation(hit.position,null));
 			}
 		}
 	}
 
-	public Vector3 GetNewWaitLocation() {
-		if (waitLocations.Count == 0) {
+	public Vector3 RegisterPerson(Person person) {
+		WaitLocation waitLocation = waitLocations.FirstOrDefault (a => a.person == null);	//return first entry where person is null
+		if (waitLocation == default(WaitLocation)) {										//if this returned default (null) then generate new locations and pick one
+			Debug.Log("Consumed all wait locations at platform. Generating new set.");
 			CalculateNewWaitLocations ();
+			waitLocation = waitLocations.First (a => a.person == null);
 		}
-		int randIndex = Random.Range (0, waitLocations.Count);
-		Vector3 waitLocation = waitLocations [randIndex];
-		waitLocations.RemoveAt (randIndex);
-		return waitLocation;
-	}
-		
-	public void RegisterPerson(Person person) {
-		peopleAtPlatform.Add (person);
+		waitLocation.person = person;	//mark this waitLocation as full with this person
+		return waitLocation.position;
 	}
 
 	public void UnregisterPerson(Person person) {
-		peopleAtPlatform.Remove (person);	//perhaps the wait locations should be the store for people...
+		try {
+			waitLocations.First(a => a.person == person).person = null;	//set person = null for this waitLocation
+		} catch {
+			Debug.LogError ("Could not find expected person in platform list.");
+		}
 	}
 
 	void OnDrawGizmos() {
@@ -88,9 +82,18 @@ public class Platform : MonoBehaviour {
 		}
 		if (waitLocations.Count > 0) {
 			Gizmos.color = Color.yellow;
-			foreach (Vector3 waitLocation in waitLocations) {
-				Gizmos.DrawSphere (waitLocation, 0.1f);
+			foreach (WaitLocation waitLocation in waitLocations.Where (a => a.person == null)) {
+				Gizmos.DrawSphere (waitLocation.position, 0.1f);
 			}
+		}
+	}
+
+	private class WaitLocation {
+		public Vector3 position;
+		public Person person;
+		public WaitLocation(Vector3 _pos, Person _person) {
+			position = _pos;
+			person = _person;
 		}
 	}
 }

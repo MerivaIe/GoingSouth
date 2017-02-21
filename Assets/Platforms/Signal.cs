@@ -4,13 +4,6 @@ using UnityEngine;
 
 public class Signal : MonoBehaviour {
 
-	public enum SignalType {Brake,Accelerate}
+	public enum SignalType {Brake}
 	public SignalType signalType;
-
-	void Start () {
-		if (signalType == SignalType.Brake) {
-		}
-	}
-
-
 }

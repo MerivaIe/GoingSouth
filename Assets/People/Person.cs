@@ -11,11 +11,11 @@ public class Person : MonoBehaviour {
 	/// <summary>
 	/// PersonStatus: MovingToPlatform=nmAgent control to centre of platform | WrongPlatform=nmAgent control to waiting area | MovingToDoor=nmAgent control to one door location | Boarding=physics control avoidance of others
 	/// </summary>
-	public enum PersonStatus{MovingToPlatform,WrongPlatform,ReadyToBoard,MovingToDoor,Boarding,Boarded,Alighted,Compromised}
+	public enum PersonStatus{MovingToPlatform,MovingToFoyer,ReadyToBoard,MovingToDoor,Boarding,Boarded,Alighted,Compromised}
 	public PersonStatus status; 
 	public string destination{ get; private set; }
 	public Platform currentPlatform;
-	public float sqrMagDeathVelocity = 1f, boardingForce = 20f, dragBase = 20f, targetThreshold = 2f, checkProximityEvery = 0.5f,proximityDistance = 0.5f;
+	public float sqrMagDeathVelocity = 1f, boardingForce = 20f, dragBase = 20f, sqrTargetThreshold = 4f, checkProximityEvery = 0.5f,proximityDistance = 0.5f;
 
 	private NavMeshAgent nmAgent;
 	private NavMeshObstacle nmObstacle;
@@ -45,7 +45,6 @@ public class Person : MonoBehaviour {
 		float angleBetweenDirections = fanAngleInDegrees / (directionCount-1);
 		for (int i = 0; i < directionCount; i++) {
 			proximityAngles [i] = (i - midPoint) * angleBetweenDirections;
-			Debug.Log ("Proximity angles... Index: " + i.ToString () + " AngleValue: " + proximityAngles[i].ToString () + " Sin/Cos(0): " + Mathf.Sin (proximityAngles[i]) + "|" + Mathf.Cos (proximityAngles[i]));
 		}
 	}
 
@@ -55,14 +54,14 @@ public class Person : MonoBehaviour {
 			case PersonStatus.ReadyToBoard:
 				SetAgentControl (false);
 				SetDoorTarget ();
+				transform.LookAt (trainTarget);
 				status = PersonStatus.MovingToDoor;
 				//free up their wait space? no... I guess people arriving will board straight away [think]
 				break;
 			case PersonStatus.MovingToDoor:
 				Vector3 boardingVector = trainTarget - transform.position;
 				boardingVector.y = 0f;
-				transform.rotation = Quaternion.LookRotation (boardingVector);
-				if (boardingVector.magnitude > targetThreshold) {	//if still far from door
+				if (boardingVector.sqrMagnitude > sqrTargetThreshold) {	//if still far from door
 					if (Time.time > nextProximityCheck) {			//check proximity periodically to set boarding by velocity or by force
 						boardWithVelocity = !IsForwardClear (boardingVector.normalized);
 						nextProximityCheck = Time.time + checkProximityEvery;
@@ -111,28 +110,30 @@ public class Person : MonoBehaviour {
 				status = PersonStatus.Boarded;
 			} else {
 				Platform platform = coll.gameObject.GetComponent<Platform> ();
-				if (platform && status == PersonStatus.MovingToPlatform) {
-					currentPlatform = platform;
-					if (destination == currentPlatform.nextDeparture) {
-						RegisterWithPlatform ();
-						nmAgent.SetDestination (platformTarget);
+				if (platform) {
+					if (status == PersonStatus.MovingToPlatform) {
+						currentPlatform = platform;
+						if (destination == currentPlatform.nextDeparture) {
+							RegisterWithPlatform ();
+							nmAgent.SetDestination (platformTarget);
+							status = PersonStatus.ReadyToBoard;
+						} else {
+							status = PersonStatus.MovingToFoyer;	//currently unhandled
+						}
+					} else if (status == PersonStatus.Boarding || status == PersonStatus.Boarded){		//if person has fallen out of train
 						status = PersonStatus.ReadyToBoard;
-					} else {
-						status = PersonStatus.WrongPlatform;	//currently unhandled
 					}
 				}
 			}
 		}
 	}
 
-	void OnTriggerExit(Collider coll) {
-		Platform platform = coll.gameObject.GetComponent<Platform> ();
-		if (currentPlatform && platform == currentPlatform) {
-			UnregisterWithPlatform ();
-		} else if (coll.gameObject.GetComponent <Train> () && status == PersonStatus.Boarded) {			//if this is the trigger inside the train carriage
-			status = PersonStatus.MovingToDoor;
-		}
-	}
+//	void OnTriggerExit(Collider coll) {
+//		Platform platform = coll.gameObject.GetComponent<Platform> ();
+//		if (currentPlatform && platform == currentPlatform) {
+//			UnregisterWithPlatform ();
+//		}
+//	}
 
 	bool IsForwardClear (Vector3 targetVector)
 	{
@@ -163,10 +164,10 @@ public class Person : MonoBehaviour {
 	}
 
 	void SetDoorTarget() {
-		float shortestRoute = (currentPlatform.doorLocations[0] - transform.position).magnitude;
+		float shortestRoute = (currentPlatform.doorLocations[0] - transform.position).sqrMagnitude;
 		int closestTargetIndex = 0;
 		for (int i=1;i<currentPlatform.doorLocations.Count;i++) {
-			float routeToTarget = (currentPlatform.doorLocations [i] - transform.position).magnitude;
+			float routeToTarget = (currentPlatform.doorLocations [i] - transform.position).sqrMagnitude;
 			if (routeToTarget < shortestRoute) {
 				shortestRoute = routeToTarget;
 				closestTargetIndex = i;
@@ -182,12 +183,11 @@ public class Person : MonoBehaviour {
 
 	void RegisterWithPlatform ()
 	{
-		currentPlatform.RegisterPerson (this);
-		platformTarget = currentPlatform.GetNewWaitLocation ();
+		platformTarget = currentPlatform.RegisterPerson (this);
 	}
 
 	void UnregisterWithPlatform() {
 		currentPlatform.UnregisterPerson (this);
-		//send nmAgent back to waiting area or something?
+		status = PersonStatus.MovingToFoyer;
 	}
 }

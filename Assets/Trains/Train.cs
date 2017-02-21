@@ -4,8 +4,6 @@ using UnityEngine;
 
 public class Train : MonoBehaviour {
 
-	//tried doing all this with force but too difficult and also I imagine kinematic would be required
-
 	public float speed = 10f, length, boardingTime = 10f, accelerationMultiplier = 4f;
 	public enum TrainStatus {Moving,Braking,BoardingTime,Accelerating,Idle}
 	public TrainStatus status{ get; private set; }
@@ -26,7 +24,7 @@ public class Train : MonoBehaviour {
 		Vector3 newVelocity = rb.velocity;
 		switch (status) {	//both of these rely on startSpeedX set at the point this status is set
 		case TrainStatus.Braking:				
-			if (rb.velocity.x <= 0.0001f) {								//if we have stopped then open doors
+			if (rb.velocity.x <= 0.001f) {								//if we have stopped then open doors
 				rb.constraints |= RigidbodyConstraints.FreezePositionX;	//Set freeze x position
 				OpenDoors ();
 			} else {													//otherwise we are braking: reduce velocity gradually to zero
