@@ -15,12 +15,15 @@ public class Platform : MonoBehaviour {
 
 	private List<WaitLocation> waitLocations = new List<WaitLocation> ();
 	private Bounds platformTriggerBounds, platformSignalBounds;
+	private float personTargetThreshold;
 
 	void Start () {
-		platformTriggerBounds = GetComponent <BoxCollider>().bounds;
+		platformTriggerBounds = GetComponentInChildren<PlatformTrigger>().gameObject.GetComponent <BoxCollider>().bounds;
 		platformSignalBounds = GetComponentInChildren<Signal> ().gameObject.GetComponent <BoxCollider> ().bounds;
 		nextDeparture = "Bristol"; //hard coding
 		incomingTrain = GameManager.GetNextTrain (this);
+		personTargetThreshold = Mathf.Sqrt (Person.sqrTargetThreshold);
+
 
 		doorLocations = new List<Vector3> ();
 		RecalculateTargetLocations ();
@@ -31,8 +34,8 @@ public class Platform : MonoBehaviour {
 		doorLocations.Clear ();
 		Door[] doors = incomingTrain.GetComponentsInChildren <Door> ();
 		Vector3 newTarget;
-		newTarget.y = platformSignalBounds.max.y + 0.5f;
-		newTarget.z = platformSignalBounds.center.z - 2f;
+		newTarget.y = GetComponent <MeshCollider>().bounds.max.y + 0.5f;	//ideally this would be + half the height of the agent
+		newTarget.z = platformSignalBounds.center.z + (-incomingTrain.transform.localScale.z*personTargetThreshold);
 		foreach (Door door in doors) {
 			newTarget.x = platformSignalBounds.max.x + door.gameObject.transform.localPosition.x;
 			doorLocations.Add (newTarget);
@@ -76,7 +79,7 @@ public class Platform : MonoBehaviour {
 			if (doorLocations.Count > 0) {
 				Gizmos.color = Color.green;
 				foreach (Vector3 targetLocation in doorLocations) {
-					Gizmos.DrawWireSphere (targetLocation, 1f);
+					Gizmos.DrawWireSphere (targetLocation, personTargetThreshold);
 				}
 			}
 		}
