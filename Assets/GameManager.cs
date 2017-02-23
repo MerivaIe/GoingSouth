@@ -66,6 +66,7 @@ public class GameManager : MonoBehaviour {
 		float avgTimeBetweenTrains;
 		float routeTimeInSeconds;
 		int noTrainsAssigned;
+		int estimatedDailyFootfall;
 		public Destination(string _destination, float _avgTimeBetweenTrains, int _noTrainsAssigned) {
 			destination = _destination;
 			avgTimeBetweenTrains = _avgTimeBetweenTrains;
