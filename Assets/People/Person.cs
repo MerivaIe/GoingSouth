@@ -11,7 +11,7 @@ public class Person : MonoBehaviour {
 	/// <summary>
 	/// PersonStatus: MovingToPlatform=nmAgent control to centre of platform | WrongPlatform=nmAgent control to waiting area | MovingToDoor=nmAgent control to one door location | Boarding=physics control avoidance of others
 	/// </summary>
-	public enum PersonStatus{MovingToPlatform,MovingToFoyer,ReadyToBoard,MovingToDoor,Boarding,Boarded,Alighted,Compromised}
+	public enum PersonStatus{MovingToPlatform,MovingToFoyer,ReadyToBoard,MovingToTrainDoor,BoardingTrain,Boarded,Alighted,Compromised}
 	public PersonStatus status; 
 	public string destination{ get; private set; }
 	public TimetableItem timetableItem;	//this will replace the destination field above
@@ -25,7 +25,7 @@ public class Person : MonoBehaviour {
 	private Vector3 platformTarget, trainTarget;
 	private static float[] proximityAngles;
 	private float nextProximityCheck = 0f;
-	private bool boardWithVelocity = true;
+	private bool boardUsingForce = false;
 
 	void Start () {
 		rb = GetComponent <Rigidbody> ();
@@ -51,46 +51,46 @@ public class Person : MonoBehaviour {
 	}
 
 	void FixedUpdate() {
-		if (currentPlatform && currentPlatform.incomingTrain.status == Train.TrainStatus.BoardingTime && status != PersonStatus.Boarded) {
-			if (status == PersonStatus.ReadyToBoard) {	//this will execute just once and ready the person once the train has arrived
+		if (status == PersonStatus.Boarded) {return;}
+
+		if (currentPlatform && currentPlatform.incomingTrain.status == Train.TrainStatus.BoardingTime) {
+			if (status == PersonStatus.ReadyToBoard) {	//this will execute just once and ready person once train has arrived
 				SetAgentControl (false);
 				SetDoorTarget ();
-				transform.LookAt (trainTarget);
-				status = PersonStatus.MovingToDoor;
-				//free up their wait space? no... I guess people arriving will board straight away [think]
-			} else {									//handle boarding situations (getting to door using force/velocity, getting into train using force)
-				Vector3 boardingVector = trainTarget - transform.position;
-				boardingVector.y = 0f;
-				if (status == PersonStatus.MovingToDoor) {
-					if (Time.time > nextProximityCheck) {	//check proximity periodically to set boarding by velocity or by force
-						boardWithVelocity = !IsForwardClear (boardingVector.normalized);
-						nextProximityCheck = Time.time + checkProximityEvery;
-					}
-					if (boardWithVelocity) {
-						rb.drag = 0f;
-						rb.velocity = nmAgent.speed * boardingVector.normalized;
-					} else {
-						MoveUsingForce (boardingVector);
-					}
-					if (boardingVector.sqrMagnitude < sqrTargetThreshold) {	//finally, if within radius of door then shift target into train and set Boarding flag (for next FixedUpdate)
-						trainTarget.z += 2f * currentPlatform.incomingTrain.transform.localScale.z;
-						status = PersonStatus.Boarding;
-					}
-				} else if (status == PersonStatus.Boarding) {
-					MoveUsingForce (boardingVector);
+				transform.LookAt (trainTarget);	//maybe look at random target?
+				status = PersonStatus.MovingToTrainDoor;
+				//free up their wait space? no... do this after train has taken off
+			}
+			//handle boarding situations (getting to door using force/velocity, getting into train using force)
+			Vector3 boardingVector = trainTarget - transform.position;
+			boardingVector.y = 0f;
+			if (status == PersonStatus.MovingToTrainDoor) {
+				if (Time.time > nextProximityCheck) {	//check proximity periodically to set boarding by velocity or by force
+					boardUsingForce = !IsForwardClear (boardingVector.normalized);
+					nextProximityCheck = Time.time + checkProximityEvery;
+				}
+				if (boardingVector.sqrMagnitude < sqrTargetThreshold) {	//finally, if within radius of door then shift target into train and set Boarding flag (for next FixedUpdate)
+					trainTarget.z += 2f * currentPlatform.incomingTrain.transform.localScale.z;
+					status = PersonStatus.BoardingTrain;
 				}
 			}
-
-			//case PersonStatus.Boarded:
-				//maybe add some slight corrective rotation to try stay upright if feet are on ground
-			//if they have been waiting for more than 5 seconds they get a nearby location and move. or just shuffle their looking at.
-			//actually, to ensure that people can be shoved off the platform we should make it physics control trying to reach their assigned destination (and maybe add a NM Obstacle so agents know to avoid them).
-		} else {
-			switch (status) {
-			case PersonStatus.ReadyToBoard:
-				//else if we are just waiting for train to arrive then use physics control to nudge towards our target
-				break;
+			if (status == PersonStatus.BoardingTrain || boardUsingForce) {
+				MoveUsingForce (boardingVector);
+			} else {
+				rb.drag = 0f;
+				rb.velocity = nmAgent.speed * boardingVector.normalized;
 			}
+		} else {
+			if (status == PersonStatus.BoardingTrain || status == PersonStatus.MovingToTrainDoor) {	//if unsuccessful boarding train
+				SetAgentControl (true);
+				status = PersonStatus.ReadyToBoard;
+			}
+			if (nmAgent.enabled && nmAgent.remainingDistance < 0.1f) {	//if they have come off the navmesh then this will error
+				SetAgentControl (false);
+				//transform.LookAt (trainTarget);	//maybe look at random target?
+			}
+			//if we are just waiting for train to arrive at our platform target then use physics control to nudge towards our target?
+			//if they have been waiting for more than 5 seconds they get a nearby location and move. or just shuffle their looking at.
 		}
 	}
 
@@ -104,26 +104,26 @@ public class Person : MonoBehaviour {
 				rb.drag = 0f;
 				rb.constraints = RigidbodyConstraints.None;
 				status = PersonStatus.Boarded;
-			} else {
-				if (coll.gameObject.GetComponent<PlatformTrigger> ()) {
-					if (status == PersonStatus.MovingToPlatform) {
-						currentPlatform =  coll.gameObject.GetComponentInParent<Platform> ();
-						if (destination == currentPlatform.nextDeparture) {
-							RegisterWithPlatform ();
-							nmAgent.SetDestination (platformTarget);
-							status = PersonStatus.ReadyToBoard;
-						} else {
-							status = PersonStatus.MovingToFoyer;	//currently unhandled
-						}
-					} else if (status == PersonStatus.Boarding || status == PersonStatus.Boarded){		//if person has fallen out of train
+			} else if (coll.gameObject.GetComponent<PlatformTrigger> ()) {
+				if (status == PersonStatus.MovingToPlatform) {
+					currentPlatform = coll.gameObject.GetComponentInParent<Platform> ();
+					if (destination == currentPlatform.nextDeparture) {
+						RegisterWithPlatform ();
+						nmAgent.SetDestination (platformTarget);
 						status = PersonStatus.ReadyToBoard;
+					} else {
+						status = PersonStatus.MovingToFoyer;	//currently unhandled
 					}
+//				} else if (status == PersonStatus.Boarding || status == PersonStatus.Boarded){		//if person has fallen out of train
+//					status = PersonStatus.ReadyToBoard;
+//				}
+				} else if (status == PersonStatus.Boarded) {
+					status = PersonStatus.BoardingTrain;
 				}
 			}
 		}
 	}
 	//need to unregister everyone once the train leaves
-
 //	void OnTriggerExit(Collider coll) {
 //		Platform platform = coll.gameObject.GetComponent<Platform> ();
 //		if (currentPlatform && platform == currentPlatform) {
@@ -133,15 +133,15 @@ public class Person : MonoBehaviour {
 
 	bool IsForwardClear (Vector3 targetVector)
 	{
-		Debug.DrawRay (transform.position,targetVector,Color.yellow,0.5f);
+		//Debug.DrawRay (transform.position,targetVector,Color.yellow,0.5f);
 		foreach (float angle in proximityAngles) {
 			Vector3 direction = Quaternion.AngleAxis(angle,Vector3.up) * targetVector;
-			Debug.DrawRay (transform.position, direction * proximityDistance, Color.green, 0.5f);
+			//Debug.DrawRay (transform.position, direction * proximityDistance, Color.green, 0.5f);
 			if (Physics.Raycast (transform.position,direction, proximityDistance,LayerMask.NameToLayer ("People"))) {
-				return true;
+				return false;
 			}
 		}
-		return false;
+		return true;
 	}
 
 	void MoveUsingForce(Vector3 boardingVector) {
