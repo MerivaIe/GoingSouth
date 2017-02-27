@@ -56,14 +56,28 @@ public class Platform : MonoBehaviour {
 	}
 
 	public Vector3 RegisterPerson(Person person) {
-		WaitLocation waitLocation = waitLocations.FirstOrDefault (a => a.person == null);	//return first entry where person is null
-		if (waitLocation == default(WaitLocation)) {										//if this returned default (null) then generate new locations and pick one
-			Debug.Log("Consumed all wait locations at platform. Generating new set.");
-			CalculateNewWaitLocations ();
-			waitLocation = waitLocations.First (a => a.person == null);
+//		WaitLocation waitLocation = waitLocations.FirstOrDefault (a => a.person == null);	//return first entry where person is null
+//		if (waitLocation == default(WaitLocation)) {										//if this returned default (null) then generate new locations and pick one
+//			Debug.Log("Consumed all wait locations at platform. Generating new set.");
+//			CalculateNewWaitLocations ();
+//			waitLocation = waitLocations.First (a => a.person == null);
+//		}
+//		waitLocation.person = person;	//mark this waitLocation as full with this person
+//		return waitLocation.position;
+
+		try {
+			List<WaitLocation> freeWaitLocations = waitLocations.Where (a => a.person == null).ToList ();
+			if (freeWaitLocations.Count == 0) {
+				CalculateNewWaitLocations ();
+				freeWaitLocations = waitLocations;
+			}
+			WaitLocation waitLocation = freeWaitLocations [Random.Range (0, freeWaitLocations.Count ())];
+			waitLocation.person = person;
+			return waitLocation.position;
+		} catch {
+			Debug.Log ("we had a problem.");
+			return transform.position;
 		}
-		waitLocation.person = person;	//mark this waitLocation as full with this person
-		return waitLocation.position;
 	}
 
 	public void UnregisterPerson(Person person) {

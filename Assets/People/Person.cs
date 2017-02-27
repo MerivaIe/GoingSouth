@@ -11,7 +11,7 @@ public class Person : MonoBehaviour {
 	/// <summary>
 	/// PersonStatus: MovingToPlatform=nmAgent control to centre of platform | WrongPlatform=nmAgent control to waiting area | MovingToDoor=nmAgent control to one door location | Boarding=physics control avoidance of others
 	/// </summary>
-	public enum PersonStatus{MovingToPlatform,MovingToFoyer,ReadyToBoard,MovingToTrainDoor,BoardingTrain,Boarded,Alighted,Compromised}
+	public enum PersonStatus{MovingToPlatform,MovingToFoyer,ReadyToBoard,MovingToTrainDoor,BoardingTrain,FindingSeat,SatDown,Alighted,Compromised}
 	public PersonStatus status; 
 	public string destination{ get; private set; }
 	public TimetableItem timetableItem;	//this will replace the destination field above
@@ -36,11 +36,11 @@ public class Person : MonoBehaviour {
 			nmAgent.SetDestination(currentPlatform.transform.position);
 		}
 		if (proximityAngles == null) {
-			CreateProximityAngles (5,90);
+			GenerateFanAngles (5,90);
 		}
 	}
 
-	void CreateProximityAngles (int directionCount, int fanAngleInDegrees)
+	void GenerateFanAngles (int directionCount, int fanAngleInDegrees)
 	{
 		proximityAngles = new float[directionCount];
 		int midPoint = Mathf.FloorToInt (directionCount / 2);
@@ -50,16 +50,16 @@ public class Person : MonoBehaviour {
 		}
 	}
 
+	//might be better to actually do all of this on a switch(on status) at the base level actually- it is getting hard to read
 	void FixedUpdate() {
-		if (status == PersonStatus.Boarded) {return;}
+		if (status == PersonStatus.MovingToPlatform || status == PersonStatus.Compromised) {return;}	//could this be made quicker using bitwise operations on enum flags?
 
-		if (currentPlatform && currentPlatform.incomingTrain.status == Train.TrainStatus.BoardingTime) {
-			if (status == PersonStatus.ReadyToBoard) {	//this will execute just once and ready person once train has arrived
+		if (currentPlatform && currentPlatform.incomingTrain.status == Train.TrainStatus.BoardingTime && status != PersonStatus.FindingSeat) {
+			if (status == PersonStatus.ReadyToBoard) {	//this will execute just once when train arrives to ready person
 				SetAgentControl (false);
 				SetDoorTarget ();
 				transform.LookAt (trainTarget);	//maybe look at random target?
 				status = PersonStatus.MovingToTrainDoor;
-				//free up their wait space? no... do this after train has taken off
 			}
 			//handle boarding situations (getting to door using force/velocity, getting into train using force)
 			Vector3 boardingVector = trainTarget - transform.position;
@@ -80,14 +80,32 @@ public class Person : MonoBehaviour {
 				rb.drag = 0f;
 				rb.velocity = nmAgent.speed * boardingVector.normalized;
 			}
-		} else {
-			if (status == PersonStatus.BoardingTrain || status == PersonStatus.MovingToTrainDoor) {	//if unsuccessful boarding train
-				SetAgentControl (true);
+		} else if (currentPlatform.incomingTrain.status == Train.TrainStatus.Moving) {	//else train is not at platform or it is not boarding time
+			if (status == PersonStatus.FindingSeat) {
+				Component.Destroy (rb);
+				transform.parent = currentPlatform.incomingTrain.transform;
+				status = PersonStatus.SatDown;
+				//unregister from platform!!!!!!
+				return;
+			}
+			NavMeshHit hit;
+			if (status == PersonStatus.BoardingTrain || status == PersonStatus.MovingToTrainDoor) {	//if these statuses are hit we were unsuccessful boarding train so reset
+				//get closest point on navmesh and move towards it
+				NavMesh.SamplePosition (transform.position,out hit,nmAgent.height,NavMesh.AllAreas);
+				if (transform.position != hit.position) {
+					rb.velocity = (hit.position - transform.position).normalized * nmAgent.speed;
+				}
+				//TODO when you have internet: get people to stand up...Quaternion.FromToRotation (transform.up, Vector3.up)?...rb.AddTorque ()?
 				status = PersonStatus.ReadyToBoard;
 			}
-			if (nmAgent.enabled && nmAgent.remainingDistance < 0.1f) {	//if they have come off the navmesh then this will error
-				SetAgentControl (false);
-				//transform.LookAt (trainTarget);	//maybe look at random target?
+			if (status == PersonStatus.ReadyToBoard) {
+				if ((platformTarget - transform.position).sqrMagnitude < 0.01f && nmAgent.enabled) {	//if distance to target is very small
+					SetAgentControl (false);
+				} else if (NavMesh.SamplePosition (transform.position,out hit,nmAgent.radius + 0.0001f,NavMesh.AllAreas)) {	//else target still far away or nmAgent not enabled [TODO if they have come off the navmesh then this will error- sort]
+					SetAgentControl (true);
+					nmAgent.SetDestination (platformTarget);
+					//transform.LookAt (trainTarget);	//maybe look at random target?
+				}
 			}
 			//if we are just waiting for train to arrive at our platform target then use physics control to nudge towards our target?
 			//if they have been waiting for more than 5 seconds they get a nearby location and move. or just shuffle their looking at.
@@ -96,14 +114,13 @@ public class Person : MonoBehaviour {
 
 	void OnTriggerEnter(Collider coll) {
 		if (status != PersonStatus.Compromised) {
-			Train train = coll.gameObject.GetComponentInParent <Train> ();	//if this is the front of the train, trigger will be in parent transform
-			if (train && train.gameObject.GetComponent <Rigidbody> ().velocity.sqrMagnitude > sqrMagDeathVelocity) {
+			if (coll.gameObject.CompareTag ("KillingTrigger") && coll.gameObject.GetComponentInParent <Rigidbody> ().velocity.sqrMagnitude > sqrMagDeathVelocity) {
 				status = PersonStatus.Compromised;
 				DeathKnell ();
-			} else if (coll.gameObject.GetComponent <Train> () && status != PersonStatus.Boarded) {	//if this is the trigger inside the train carriage
+			} else if (coll.gameObject.GetComponent <Train> () && status != PersonStatus.FindingSeat) {	//if this is the trigger inside the train carriage
 				rb.drag = 0f;
 				rb.constraints = RigidbodyConstraints.None;
-				status = PersonStatus.Boarded;
+				status = PersonStatus.FindingSeat;
 			} else if (coll.gameObject.GetComponent<PlatformTrigger> ()) {
 				if (status == PersonStatus.MovingToPlatform) {
 					currentPlatform = coll.gameObject.GetComponentInParent<Platform> ();
@@ -114,22 +131,13 @@ public class Person : MonoBehaviour {
 					} else {
 						status = PersonStatus.MovingToFoyer;	//currently unhandled
 					}
-//				} else if (status == PersonStatus.Boarding || status == PersonStatus.Boarded){		//if person has fallen out of train
-//					status = PersonStatus.ReadyToBoard;
-//				}
-				} else if (status == PersonStatus.Boarded) {
+				} else if ( status == PersonStatus.FindingSeat) {	//if person has fallen out of train whilst boarding
+					//currentPlatform.incomingTrain.status == Train.TrainStatus.BoardingTime &&
 					status = PersonStatus.BoardingTrain;
 				}
 			}
 		}
 	}
-	//need to unregister everyone once the train leaves
-//	void OnTriggerExit(Collider coll) {
-//		Platform platform = coll.gameObject.GetComponent<Platform> ();
-//		if (currentPlatform && platform == currentPlatform) {
-//			UnregisterWithPlatform ();
-//		}
-//	}
 
 	bool IsForwardClear (Vector3 targetVector)
 	{
@@ -152,8 +160,11 @@ public class Person : MonoBehaviour {
 	}
 
 	void SetAgentControl(bool turnOn) {
-		if (rb.isKinematic != turnOn) {	//ignore request if they are already set to requested bool
-			rb.isKinematic = turnOn;
+		rb.isKinematic = turnOn;
+		if (turnOn) {	//if turning on agent then turn off obstacle FIRST (having both active at same time causes warning)
+			nmObstacle.enabled = !turnOn;
+			nmAgent.enabled = turnOn;
+		} else {
 			nmAgent.enabled = turnOn;
 			nmObstacle.enabled = !turnOn;
 		}
@@ -175,6 +186,7 @@ public class Person : MonoBehaviour {
 	void DeathKnell() {
 		SetAgentControl (false);	//turn their kinematic and nmagent off ready for beautiful physics interactions
 		rb.constraints = RigidbodyConstraints.None;
+		//TODO do we need to unregister from platform
 	}
 
 	void RegisterWithPlatform ()

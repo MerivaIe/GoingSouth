@@ -16,6 +16,7 @@ public class PersonSpawner : MonoBehaviour {
 	void Start () {
 		spawnPoints = GameObject.FindObjectsOfType <Spawnpoint> ();
 		organisingParent = GameObject.Find ("People");
+		if (!organisingParent) {Debug.LogWarning ("No 'People' organising game object found. Please create it.");}
 	}
 	
 	void Update () {
@@ -27,7 +28,7 @@ public class PersonSpawner : MonoBehaviour {
 				NavMeshAgent nmAgent = person.GetComponent <NavMeshAgent> ();
 				Vector3 platformPos = platforms[Random.Range (0, platforms.Length)].transform.position;	//set platform destination randomly from publically exposed platforms
 				nmAgent.speed = Random.Range(2f,5f);
-				nmAgent.SetDestination (platformPos);													//TODO rather than centre of the platform just set this to 
+				nmAgent.SetDestination (platformPos);
 			}
 		}
 	}
