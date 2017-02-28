@@ -35,12 +35,12 @@ public class Person : MonoBehaviour {
 		nmObstacle = GetComponent <NavMeshObstacle> ();
 		destination = "Bristol";	//TODO hard coded
 		defaultBoardingForce = boardingForce;
-		if (Random.value > 0.5f) {
-			rb.centerOfMass = new Vector3 (0f, centreOfMassYOffset, 0f);
-			rb.mass = 50f;
-		} else {
-			rb.mass = 10f;
-		}
+//		if (Random.value > 0.5f) {
+//			rb.centerOfMass = new Vector3 (0f, centreOfMassYOffset, 0f);
+//			rb.mass = 50f;
+//		} else {
+//			rb.mass = 10f;
+//		}
 		if (testMode) {
 			try {
 				nmAgent.SetDestination(currentPlatform.transform.position);
@@ -127,7 +127,7 @@ public class Person : MonoBehaviour {
 			//if we are just waiting for train to arrive at our platform target then use physics control to nudge towards our target?
 			//if they have been waiting for more than 5 seconds they get a nearby location and move. or just shuffle their looking at.
 		} else if (currentPlatform.incomingTrain.status == Train.TrainStatus.Moving) {	//else train has set off fully [handle people on train]
-//			if (currentPlatform.incomingTrain.boardingTrigger.bounds.Contains (transform.position)) {	//fix this if our new boarding tech works
+//			if (currentPlatform.incomingTrain.boardingTrigger.bounds.Contains (transform.position)) {	//TODO: THIS IS CALLED THE WHOLE TIME TRAIN IS MOVING... IMPROVE AFTER YOU HAVE FIXED BOAREDING
 //				Component.Destroy (rb);
 //				transform.parent = currentPlatform.incomingTrain.transform;
 //				status = PersonStatus.SatDown;
