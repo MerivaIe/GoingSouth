@@ -35,12 +35,12 @@ public class Person : MonoBehaviour {
 		nmObstacle = GetComponent <NavMeshObstacle> ();
 		destination = "Bristol";	//TODO hard coded
 		defaultBoardingForce = boardingForce;
-//		if (Random.value > 0.5f) {
-//			rb.centerOfMass = new Vector3 (0f, centreOfMassYOffset, 0f);
-//			rb.mass = 50f;
-//		} else {
-//			rb.mass = 10f;
-//		}
+		if (Random.value > 0.5f) {
+			rb.centerOfMass = new Vector3 (0f, centreOfMassYOffset, 0f);
+			rb.mass = 50f;
+		} else {
+			rb.mass = 10f;
+		}
 		if (testMode) {
 			try {
 				nmAgent.SetDestination(currentPlatform.transform.position);
