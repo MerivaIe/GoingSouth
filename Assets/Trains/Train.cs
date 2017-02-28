@@ -1,14 +1,17 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 
 public class Train : MonoBehaviour {
 
 	public float speed = 10f, length, boardingTime = 10f, accelerationMultiplier = 4f;
 	public enum TrainStatus {Moving,Braking,BoardingTime,Accelerating,Idle}
-	public TrainStatus status{ get; private set; }
+	public TrainStatus status;
 	public Vector3 direction;	//this should eventually be replaced with just transform.forward everywhere
 	public Color color;
+	public GameObject[] doorTriggers {get; private set;}
+	public BoxCollider boardingTrigger { get; private set; }
 
 	private Rigidbody rb;
 	private float totalDistance, startPosX, startSpeedX;
@@ -19,7 +22,15 @@ public class Train : MonoBehaviour {
 		length = 20f; 				//TODO hard coded
 		animator = GetComponent <Animator>();
 		status = TrainStatus.Idle;
-		//select color randomly from set of remaining?
+		//select color randomly from set of remaining? or should that be decided by GameManager
+
+		doorTriggers = GetComponentsInChildren <SphereCollider> ().Select (a => a.gameObject).ToArray ();
+
+		foreach (BoxCollider coll in GetComponentsInChildren <BoxCollider>()) {
+			if (coll.gameObject.tag == "BoardingTrigger") {
+				boardingTrigger = coll;
+			}
+		}
 	}
 
 	void FixedUpdate () {
@@ -93,5 +104,4 @@ public class Train : MonoBehaviour {
 		totalDistance = length * accelerationMultiplier;
 		status = TrainStatus.Accelerating;
 	}
-
 }
