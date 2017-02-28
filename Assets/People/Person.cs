@@ -25,22 +25,21 @@ public class Person : MonoBehaviour {
 	private Rigidbody rb;
 	private Vector3 platformTarget, trainTarget;
 	private static float[] proximityAngles;
-	private float nextProximityCheck = 0f;
+	private float nextProximityCheck = 0f, defaultBoardingForce;
 	private bool boardUsingForce = false;
-
-	private float tempTargetThreshold;
 
 	void Start () {
 		rb = GetComponent <Rigidbody> ();
 		nmAgent = GetComponent <NavMeshAgent>();
 		nmObstacle = GetComponent <NavMeshObstacle> ();
 		destination = "Bristol";	//TODO hard coded
-		//if (Random.value > 0.5f) {
+		defaultBoardingForce = boardingForce;
+		if (Random.value > 0.5f) {
 			rb.centerOfMass = new Vector3 (0f, centreOfMassYOffset, 0f);
 			rb.mass = 50f;
-//		} else {
-//			rb.mass = 10f;
-//		}
+		} else {
+			rb.mass = 10f;
+		}
 		if (testMode) {
 			try {
 				nmAgent.SetDestination(currentPlatform.transform.position);
@@ -51,7 +50,6 @@ public class Person : MonoBehaviour {
 		if (proximityAngles == null) {
 			GenerateFanAngles (5,90);
 		}
-		tempTargetThreshold = Mathf.Sqrt (sqrTargetThreshold);
 	}
 
 	// Found out that you can use rb.SweepTest() to do pretty much this same thing. This might be slightly more efficient though so will leave it
@@ -73,7 +71,7 @@ public class Person : MonoBehaviour {
 			if (status == PersonStatus.ReadyToBoard) {	//this will execute just once when train arrives to ready person
 				SetAgentControl (false);
 				SetDoorTarget ();
-				transform.LookAt (trainTarget);	//maybe look at random target?
+				//transform.LookAt (trainTarget);	//maybe look at random target?
 				status = PersonStatus.MovingToTrainDoor;
 			}
 			//handle boarding situations (getting to door using force/velocity, getting into train using force)
@@ -91,6 +89,9 @@ public class Person : MonoBehaviour {
 				}
 			}
 			if (status == PersonStatus.BoardingTrain || boardUsingForce) {
+//				if (currentPlatform.incomingTrain.boardingEndTime - Time.time < 1f) {	//didnt really work
+//					boardingForce = 2f * defaultBoardingForce;
+//				}
 				MoveUsingForce (boardingVector);
 			} else {
 				rb.drag = 0f;
@@ -137,25 +138,50 @@ public class Person : MonoBehaviour {
 
 	void OnTriggerEnter(Collider coll) {
 		if (status != PersonStatus.Compromised && status != PersonStatus.SatDown) {
-			if (status != PersonStatus.FindingSeat && currentPlatform && coll == currentPlatform.incomingTrain.boardingTrigger) {
-				rb.drag = 0f;
-				rb.constraints = RigidbodyConstraints.None;
-				status = PersonStatus.FindingSeat;
+//			if (status != PersonStatus.FindingSeat && currentPlatform && coll == currentPlatform.incomingTrain.boardingTrigger) {
+//				rb.drag = 0f;
+//				rb.constraints = RigidbodyConstraints.None;
+//				status = PersonStatus.FindingSeat;
 				//Physics.IgnoreCollision (GetComponent <CapsuleCollider> (), currentPlatform.incomingTrain.boardingCollider, false);
-			} else if (status == PersonStatus.MovingToPlatform && coll.gameObject.GetComponent<PlatformTrigger> ()) {
-				currentPlatform = coll.gameObject.GetComponentInParent<Platform> ();
-				if (destination == currentPlatform.nextDeparture) {
-					RegisterWithPlatform ();
-					nmAgent.SetDestination (platformTarget);
-					status = PersonStatus.ReadyToBoard;
-				} else {
-					status = PersonStatus.MovingToFoyer;	//currently unhandled
+			if (coll.gameObject.GetComponent<PlatformTrigger> ()) {
+				if (status == PersonStatus.MovingToPlatform) {
+					currentPlatform = coll.gameObject.GetComponentInParent<Platform> ();
+					if (destination == currentPlatform.nextDeparture) {
+						RegisterWithPlatform ();
+						nmAgent.SetDestination (platformTarget);
+						status = PersonStatus.ReadyToBoard;
+					} else {
+						status = PersonStatus.MovingToFoyer;	//currently unhandled
+					}
 				}
+			} else if (status == PersonStatus.FindingSeat && coll.gameObject.GetComponentInParent<Door>()) {
+				status = PersonStatus.BoardingTrain;
+				//rb.constraints = RigidbodyConstraints.FreezePositionY;
 			} else if (coll.CompareTag ("KillingTrigger") && coll.gameObject.GetComponentInParent <Rigidbody> ().velocity.sqrMagnitude > sqrMagDeathVelocity) {
 				status = PersonStatus.Compromised;
 				DeathKnell ();
 			}
 		}
+	}
+
+	void OnTriggerExit(Collider coll) {
+		//this was using a door trigger (on way in)
+		if (status == PersonStatus.BoardingTrain && coll.gameObject.GetComponentInParent <Door> () && currentPlatform.incomingTrain.boardingTrigger.bounds.Contains (transform.position)) {
+			rb.drag = 0f;
+			rb.constraints = RigidbodyConstraints.None;
+			status = PersonStatus.FindingSeat;
+		}
+
+		//this was using boarding trigger (on way out)
+//		if (status == PersonStatus.FindingSeat && coll == currentPlatform.incomingTrain.boardingTrigger) {
+//			//lerp towards 				Quaternion.LookRotation ()?
+//			//then once there freeze Y
+//			Vector3 newPos = transform.position;
+//			newPos.y = trainTarget.y;
+//			transform.position = newPos;
+//			rb.constraints = RigidbodyConstraints.FreezePositionY;
+//			status = PersonStatus.ReadyToBoard;
+//		}
 	}
 
 	bool IsForwardClear (Vector3 targetVector)
@@ -174,9 +200,8 @@ public class Person : MonoBehaviour {
 	void MoveUsingForce(Vector3 boardingVector) {
 		float angleDiff = Mathf.Deg2Rad * Vector3.Angle (rb.velocity, boardingVector);	// provide a bit of drag to prevent oscillation around boarding vector
 		float dragModifier = Mathf.Sin (0.5f * angleDiff);
-		rb.drag = dragModifier * dragBase;
-		//rb.AddForce (boardingForce * boardingVector.normalized, ForceMode.Acceleration);
-		rb.AddForceAtPosition (boardingForce * boardingVector.normalized,rb.centerOfMass,ForceMode.Acceleration);
+		//rb.drag = dragModifier * dragBase;	//maybe do this only when outside the train
+		rb.AddForce (boardingForce * boardingVector.normalized, ForceMode.Acceleration);
 	}
 
 	void SetAgentControl(bool turnOn) {

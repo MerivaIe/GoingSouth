@@ -5,7 +5,7 @@ using System.Linq;
 
 public class Train : MonoBehaviour {
 
-	public float speed = 10f, length, boardingDuration = 10f, accelerationMultiplier = 4f;
+	public float speed = 10f, length, boardingDuration = 10f, accelerationMultiplier = 4f, boardingEndTime;
 	public enum TrainStatus {Moving,Braking,BoardingTime,Accelerating,Idle}
 	public TrainStatus status;
 	public Vector3 direction;	//this should eventually be replaced with just transform.forward everywhere
@@ -94,6 +94,7 @@ public class Train : MonoBehaviour {
 	void SetBoardingTime() {
 		animator.ResetTrigger ("doorOpen");
 		status = TrainStatus.BoardingTime;
+		boardingEndTime = Time.time + boardingDuration;
 		Invoke ("CloseDoors", boardingDuration);
 	}
 
