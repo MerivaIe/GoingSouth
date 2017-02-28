@@ -17,7 +17,7 @@ public class Person : MonoBehaviour {
 	public string destination{ get; private set; }
 	public TimetableItem timetableItem;	//this will replace the destination field above
 	public Platform currentPlatform;
-	public float sqrMagDeathVelocity = 1f, boardingForce = 20f, dragBase = 20f, checkProximityEvery = 0.5f,proximityDistance = 0.5f;
+	public float sqrMagDeathVelocity = 1f, boardingForce = 20f, dragBase = 20f, checkProximityEvery = 0.5f,proximityDistance = 0.5f, centreOfMassYOffset = 0f;
 	public static float sqrTargetThreshold = 4f;
 
 	private NavMeshAgent nmAgent;
@@ -28,12 +28,19 @@ public class Person : MonoBehaviour {
 	private float nextProximityCheck = 0f;
 	private bool boardUsingForce = false;
 
+	private float tempTargetThreshold;
+
 	void Start () {
 		rb = GetComponent <Rigidbody> ();
 		nmAgent = GetComponent <NavMeshAgent>();
 		nmObstacle = GetComponent <NavMeshObstacle> ();
 		destination = "Bristol";	//TODO hard coded
-		rb.centerOfMass = new Vector3(0f,-0.05f,0f);
+		//if (Random.value > 0.5f) {
+			rb.centerOfMass = new Vector3 (0f, centreOfMassYOffset, 0f);
+			rb.mass = 50f;
+//		} else {
+//			rb.mass = 10f;
+//		}
 		if (testMode) {
 			try {
 				nmAgent.SetDestination(currentPlatform.transform.position);
@@ -44,6 +51,7 @@ public class Person : MonoBehaviour {
 		if (proximityAngles == null) {
 			GenerateFanAngles (5,90);
 		}
+		tempTargetThreshold = Mathf.Sqrt (sqrTargetThreshold);
 	}
 
 	// Found out that you can use rb.SweepTest() to do pretty much this same thing. This might be slightly more efficient though so will leave it
@@ -133,7 +141,7 @@ public class Person : MonoBehaviour {
 				rb.drag = 0f;
 				rb.constraints = RigidbodyConstraints.None;
 				status = PersonStatus.FindingSeat;
-				Physics.IgnoreCollision (GetComponent <CapsuleCollider> (), currentPlatform.incomingTrain.boardingCollider, false);
+				//Physics.IgnoreCollision (GetComponent <CapsuleCollider> (), currentPlatform.incomingTrain.boardingCollider, false);
 			} else if (status == PersonStatus.MovingToPlatform && coll.gameObject.GetComponent<PlatformTrigger> ()) {
 				currentPlatform = coll.gameObject.GetComponentInParent<Platform> ();
 				if (destination == currentPlatform.nextDeparture) {
@@ -167,7 +175,8 @@ public class Person : MonoBehaviour {
 		float angleDiff = Mathf.Deg2Rad * Vector3.Angle (rb.velocity, boardingVector);	// provide a bit of drag to prevent oscillation around boarding vector
 		float dragModifier = Mathf.Sin (0.5f * angleDiff);
 		rb.drag = dragModifier * dragBase;
-		rb.AddForce (boardingForce * boardingVector.normalized, ForceMode.Acceleration);
+		//rb.AddForce (boardingForce * boardingVector.normalized, ForceMode.Acceleration);
+		rb.AddForceAtPosition (boardingForce * boardingVector.normalized,rb.centerOfMass,ForceMode.Acceleration);
 	}
 
 	void SetAgentControl(bool turnOn) {
@@ -193,8 +202,8 @@ public class Person : MonoBehaviour {
 			}
 		}
 		trainTarget = doorLocations[closestTargetIndex];
-		trainTarget.z += 0.75f * -currentPlatform.incomingTrain.transform.localScale.z;	//shift the target out a bit so people are not grinding against train trying to get to door
-		Physics.IgnoreCollision (GetComponent <CapsuleCollider> (), currentPlatform.incomingTrain.boardingCollider,true);
+		trainTarget.z += 1.25f * -currentPlatform.incomingTrain.transform.localScale.z;	//shift the target out a bit so people are not grinding against train trying to get to door
+		//Physics.IgnoreCollision (GetComponent <CapsuleCollider> (), currentPlatform.incomingTrain.boardingCollider,true);
 	}
 
 	void DeathKnell() {

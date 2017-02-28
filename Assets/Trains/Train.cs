@@ -24,6 +24,10 @@ public class Train : MonoBehaviour {
 		animator = GetComponent <Animator>();
 		status = TrainStatus.Idle;
 		//select color randomly from set of remaining? or should that be decided by GameManager
+		//Color RandomColor() {
+		//	return new Color(Random.value, Random.value, Random.value);
+		//}
+
 
 		doors = GetComponentsInChildren <Door> ().Select (a => a.gameObject).ToArray ();
 
