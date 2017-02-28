@@ -123,11 +123,11 @@ public class Person : MonoBehaviour {
 	}
 
 	void OnTriggerEnter(Collider coll) {
-		if (status != PersonStatus.Compromised) {
+		if (status != PersonStatus.Compromised && status != PersonStatus.SatDown) {
 			if (coll == currentPlatform.incomingTrain.killingTrigger && coll.gameObject.GetComponentInParent <Rigidbody> ().velocity.sqrMagnitude > sqrMagDeathVelocity) {
 				status = PersonStatus.Compromised;
 				DeathKnell ();
-			} else if (coll == currentPlatform.incomingTrain.boardingTrigger) {
+			} else if (status != PersonStatus.FindingSeat && coll == currentPlatform.incomingTrain.boardingTrigger) {
 				rb.drag = 0f;
 				rb.constraints = RigidbodyConstraints.None;
 				status = PersonStatus.FindingSeat;
