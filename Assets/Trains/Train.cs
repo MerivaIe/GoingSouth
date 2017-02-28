@@ -5,13 +5,15 @@ using System.Linq;
 
 public class Train : MonoBehaviour {
 
-	public float speed = 10f, length, boardingTime = 10f, accelerationMultiplier = 4f;
+	public float speed = 10f, length, boardingDuration = 10f, accelerationMultiplier = 4f;
 	public enum TrainStatus {Moving,Braking,BoardingTime,Accelerating,Idle}
 	public TrainStatus status;
 	public Vector3 direction;	//this should eventually be replaced with just transform.forward everywhere
 	public Color color;
-	public GameObject[] doorTriggers {get; private set;}
+	public GameObject[] doors {get; private set;}	//has to be gameobject so that transform is queried once train reaches platform
 	public BoxCollider boardingTrigger { get; private set; }
+	public BoxCollider boardingCollider{ get; private set; }
+	public BoxCollider killingTrigger { get; private set; }
 
 	private Rigidbody rb;
 	private float totalDistance, startPosX, startSpeedX;
@@ -24,11 +26,15 @@ public class Train : MonoBehaviour {
 		status = TrainStatus.Idle;
 		//select color randomly from set of remaining? or should that be decided by GameManager
 
-		doorTriggers = GetComponentsInChildren <SphereCollider> ().Select (a => a.gameObject).ToArray ();
+		doors = GetComponentsInChildren <Door> ().Select (a => a.gameObject).ToArray ();
 
 		foreach (BoxCollider coll in GetComponentsInChildren <BoxCollider>()) {
-			if (coll.gameObject.tag == "BoardingTrigger") {
+			if (coll.gameObject.CompareTag ("BoardingTrigger")) {
 				boardingTrigger = coll;
+			} else if (coll.gameObject.CompareTag ("BoardingCollider")) {
+				boardingCollider = coll;
+			} else if (coll.gameObject.CompareTag ("KillingTrigger")) {
+				killingTrigger = coll;
 			}
 		}
 	}
@@ -87,7 +93,7 @@ public class Train : MonoBehaviour {
 	void SetBoardingTime() {
 		animator.ResetTrigger ("doorOpen");
 		status = TrainStatus.BoardingTime;
-		Invoke ("CloseDoors", boardingTime);
+		Invoke ("CloseDoors", boardingDuration);
 	}
 
 	void CloseDoors() {
