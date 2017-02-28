@@ -33,6 +33,7 @@ public class Person : MonoBehaviour {
 		nmAgent = GetComponent <NavMeshAgent>();
 		nmObstacle = GetComponent <NavMeshObstacle> ();
 		destination = "Bristol";	//TODO hard coded
+		rb.centerOfMass = new Vector3(0f,-0.1f,0f);
 		if (testMode) {
 			nmAgent.SetDestination(currentPlatform.transform.position);
 		}
