@@ -13,7 +13,6 @@ public class Train : MonoBehaviour {
 	public GameObject[] doors {get; private set;}	//has to be gameobject so that transform is queried once train reaches platform
 	public BoxCollider boardingTrigger { get; private set; }
 	public BoxCollider boardingCollider{ get; private set; }
-	public BoxCollider killingTrigger { get; private set; }
 
 	private Rigidbody rb;
 	private float totalDistance, startPosX, startSpeedX;
@@ -33,8 +32,6 @@ public class Train : MonoBehaviour {
 				boardingTrigger = coll;
 			} else if (coll.gameObject.CompareTag ("BoardingCollider")) {
 				boardingCollider = coll;
-			} else if (coll.gameObject.CompareTag ("KillingTrigger")) {
-				killingTrigger = coll;
 			}
 		}
 	}

@@ -33,9 +33,13 @@ public class Person : MonoBehaviour {
 		nmAgent = GetComponent <NavMeshAgent>();
 		nmObstacle = GetComponent <NavMeshObstacle> ();
 		destination = "Bristol";	//TODO hard coded
-		rb.centerOfMass = new Vector3(0f,-0.1f,0f);
+		rb.centerOfMass = new Vector3(0f,-0.05f,0f);
 		if (testMode) {
-			nmAgent.SetDestination(currentPlatform.transform.position);
+			try {
+				nmAgent.SetDestination(currentPlatform.transform.position);
+			} catch {
+				SetAgentControl (false);
+			}
 		}
 		if (proximityAngles == null) {
 			GenerateFanAngles (5,90);
@@ -125,14 +129,11 @@ public class Person : MonoBehaviour {
 
 	void OnTriggerEnter(Collider coll) {
 		if (status != PersonStatus.Compromised && status != PersonStatus.SatDown) {
-			if (coll == currentPlatform.incomingTrain.killingTrigger && coll.gameObject.GetComponentInParent <Rigidbody> ().velocity.sqrMagnitude > sqrMagDeathVelocity) {
-				status = PersonStatus.Compromised;
-				DeathKnell ();
-			} else if (status != PersonStatus.FindingSeat && coll == currentPlatform.incomingTrain.boardingTrigger) {
+			if (status != PersonStatus.FindingSeat && currentPlatform && coll == currentPlatform.incomingTrain.boardingTrigger) {
 				rb.drag = 0f;
 				rb.constraints = RigidbodyConstraints.None;
 				status = PersonStatus.FindingSeat;
-				Physics.IgnoreCollision (GetComponent <CapsuleCollider>(),currentPlatform.incomingTrain.boardingCollider,false);
+				Physics.IgnoreCollision (GetComponent <CapsuleCollider> (), currentPlatform.incomingTrain.boardingCollider, false);
 			} else if (status == PersonStatus.MovingToPlatform && coll.gameObject.GetComponent<PlatformTrigger> ()) {
 				currentPlatform = coll.gameObject.GetComponentInParent<Platform> ();
 				if (destination == currentPlatform.nextDeparture) {
@@ -142,6 +143,9 @@ public class Person : MonoBehaviour {
 				} else {
 					status = PersonStatus.MovingToFoyer;	//currently unhandled
 				}
+			} else if (coll.CompareTag ("KillingTrigger") && coll.gameObject.GetComponentInParent <Rigidbody> ().velocity.sqrMagnitude > sqrMagDeathVelocity) {
+				status = PersonStatus.Compromised;
+				DeathKnell ();
 			}
 		}
 	}
