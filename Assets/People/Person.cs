@@ -27,7 +27,6 @@ public class Person : MonoBehaviour {
 	private static float[] proximityAngles;
 	private float nextProximityCheck = 0f;
 	private bool boardUsingForce = false;
-	private SphereCollider boardingTrigger;
 
 	void Start () {
 		rb = GetComponent <Rigidbody> ();
@@ -147,7 +146,7 @@ public class Person : MonoBehaviour {
 						status = PersonStatus.MovingToFoyer;	//currently unhandled
 					}
 				}
-			} else if (status == PersonStatus.FindingSeat && coll.GetType () == typeof(SphereCollider)) {	//person is being pushed back out of train so make them apply boarding force again
+			} else if (status == PersonStatus.FindingSeat && coll.GetType () == typeof(SphereCollider)) {	//person is being pushed back out of train so make them apply boarding force again TODO: non-critical: this doesnt work if nearly all people board from one side
 				Vector3 offset = transform.position - coll.bounds.center;
 				if (IsDirectionClear (-offset)) {	//if it is clear behind the person then push
 					trainTarget = transform.position + offset;
@@ -161,7 +160,7 @@ public class Person : MonoBehaviour {
 	}
 
 	void OnTriggerExit(Collider coll) {
-		if (status == PersonStatus.BoardingTrain && coll == boardingTrigger && currentPlatform && currentPlatform.incomingTrain.boardingTrigger.bounds.Contains (transform.position)) {
+		if (status == PersonStatus.BoardingTrain && coll.GetType () == typeof(SphereCollider) && currentPlatform && currentPlatform.incomingTrain.boardingTrigger.bounds.Contains (transform.position)) {
 			rb.drag = 0f;
 			if (Random.value > 0.33f) {
 				rb.centerOfMass = new Vector3 (0f, centreOfMassYOffset, 0f);
@@ -175,10 +174,10 @@ public class Person : MonoBehaviour {
 
 	bool IsDirectionClear (Vector3 targetVector)	//targetVector must be in the xz plane because we use Vector3.up, could make more generic by parameterising this later
 	{
-		Debug.DrawRay (transform.position,targetVector,Color.yellow,0.5f);
+		//Debug.DrawRay (transform.position,targetVector,Color.yellow,0.5f);
 		foreach (float angle in proximityAngles) {
 			Vector3 direction = Quaternion.AngleAxis(angle,Vector3.up) * targetVector;
-			Debug.DrawRay (transform.position, direction * proximityDistance, Color.green, 0.5f);
+			//Debug.DrawRay (transform.position, direction * proximityDistance, Color.green, 0.5f);
 			if (Physics.Raycast (transform.position,direction, proximityDistance,LayerMask.NameToLayer ("People"))) {
 				return false;
 			}
@@ -205,7 +204,7 @@ public class Person : MonoBehaviour {
 	}
 
 	void SetDoorTarget() {
-		Vector3[] doorLocations = currentPlatform.incomingTrain.doors.Select (a => a.transform.position).ToArray ();
+		Vector3[] doorLocations = currentPlatform.incomingTrain.doors.Select (a => a.gameObject.transform.position).ToArray ();
 		float shortestRoute = (doorLocations[0] - transform.position).sqrMagnitude;
 		int closestTargetIndex = 0;
 		for (int i=1;i<doorLocations.Count ();i++) {
@@ -216,8 +215,7 @@ public class Person : MonoBehaviour {
 			}
 		}
 		trainTarget = doorLocations[closestTargetIndex];
-		trainTarget.z += 1.25f * -currentPlatform.incomingTrain.transform.localScale.z;	//shift the target out a bit so people are not grinding against train trying to get to door
-		boardingTrigger = currentPlatform.incomingTrain.doors[closestTargetIndex].GetComponentInChildren <SphereCollider>();
+		//trainTarget.z += 1.25f * -currentPlatform.incomingTrain.transform.localScale.z;	//shift the target out a bit so people are not grinding against train trying to get to door
 	}
 
 	void DeathKnell() {

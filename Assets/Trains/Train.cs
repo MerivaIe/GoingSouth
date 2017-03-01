@@ -5,14 +5,13 @@ using System.Linq;
 
 public class Train : MonoBehaviour {
 
-	public float speed = 10f, length, boardingDuration = 10f, accelerationMultiplier = 4f, boardingCriticalTime;
+	public float speed = 10f, length, boardingDuration = 10f, accelerationMultiplier = 4f;
 	public enum TrainStatus {EnteringStation,Braking,BoardingTime,Accelerating,LeavingStation,Idle}
 	public TrainStatus status;
 	public Vector3 direction;	//this should eventually be replaced with just transform.forward everywhere
 	public Color color;
-	public GameObject[] doors {get; private set;}	//has to be gameobject so that transform is queried once train reaches platform
+	public SphereCollider[] doors {get; private set;}	//has to be collider so that transform is queried once train reaches platform
 	public BoxCollider boardingTrigger { get; private set; }
-	public BoxCollider boardingCollider{ get; private set; }
 
 	private Rigidbody rb;
 	private float totalDistance, startPosX, startSpeedX;
@@ -28,14 +27,11 @@ public class Train : MonoBehaviour {
 		//	return new Color(Random.value, Random.value, Random.value);
 		//}
 
+		doors = GetComponentsInChildren <SphereCollider>().ToArray ();
 
-		doors = GetComponentsInChildren <Door> ().Select (a => a.gameObject).ToArray ();
-
-		foreach (BoxCollider coll in GetComponentsInChildren <BoxCollider>()) {
+		foreach (BoxCollider coll in GetComponentsInChildren <BoxCollider>()) {	//linq this
 			if (coll.gameObject.CompareTag ("BoardingTrigger")) {
 				boardingTrigger = coll;
-			} else if (coll.gameObject.CompareTag ("BoardingCollider")) {
-				boardingCollider = coll;
 			}
 		}
 	}
@@ -93,7 +89,6 @@ public class Train : MonoBehaviour {
 	void SetBoardingTime() {
 		animator.ResetTrigger ("doorOpen");
 		status = TrainStatus.BoardingTime;
-		boardingCriticalTime = Time.time + boardingDuration*0.75f;
 		Invoke ("CloseDoors", boardingDuration);
 	}
 
