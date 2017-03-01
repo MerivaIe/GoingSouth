@@ -62,12 +62,12 @@ public class Person : MonoBehaviour {
 
 		if (currentPlatform && currentPlatform.incomingTrain.status == Train.TrainStatus.BoardingTime) {
 			if (status == PersonStatus.FindingSeat) {
-				if (rb.mass == 10f && Vector3.Angle (transform.up,Vector3.up)<30f) {	//if this is one of the light people and they are standing then add up force for crowd surfing
+				if (rb.mass == 10f && Vector3.Angle (transform.up,Vector3.up)<30f) {	//if this is a light person and they are standing then add up force for crowd surfing
 					rb.AddForce (Vector3.up,ForceMode.Acceleration);
 				}
 				return;
 			}
-			//this will execute just once if train is at station to ready person: could be done in a one off method called by either train at arrival time or platform if someone arrives and train is here
+			//this will execute just once if train is at station to ready person: could be done in a one off method called by either train at arrival time or platform if someone arrives and train is here... increases complexity of model but performance would likely improve
 			if (status == PersonStatus.ReadyToBoard) {
 				SetAgentControl (false);
 				SetDoorTarget ();
@@ -91,7 +91,7 @@ public class Person : MonoBehaviour {
 //			NavMeshHit hit;
 //			if (status == PersonStatus.BoardingTrain || status == PersonStatus.MovingToTrainDoor) {	//if these statuses are hit we were unsuccessful boarding train so reset
 //				//get closest point on navmesh and move towards it
-//				NavMesh.SamplePosition (transform.position, out hit, nmAgent.height, NavMesh.AllAreas);
+//				NavMesh.SamplePosition (transform.position, out hit, nmAgent.height, NavMesh.AllAreas);--use bit shifting now that you understans
 //				Vector3 returnVector = hit.position - transform.position;
 //				if (returnVector.sqrMagnitude > 0.001f) {	//if not quite or not on navmesh
 //					rb.velocity = returnVector.normalized * nmAgent.speed;
@@ -115,14 +115,6 @@ public class Person : MonoBehaviour {
 //			}
 			//if we are just waiting for train to arrive at our platform target then use physics control to nudge towards our target?
 			//if they have been waiting for more than 5 seconds they get a nearby location and move. or just shuffle their looking at.
-		} else if (currentPlatform.incomingTrain.status == Train.TrainStatus.LeavingStation) {	//else train has set off fully [handle people on train]
-			if (currentPlatform.incomingTrain.boardingTrigger.bounds.Contains (transform.position)) {	//TODO: THIS SHOULD BE CALLED BY TRAIN ONCE MOVING CHECKING INSIDE COLLIDER
-				Component.Destroy (rb);
-				transform.parent = currentPlatform.incomingTrain.transform;
-				status = PersonStatus.SatDown;
-				//TODO unregister from platform!!!!!!
-				return;
-			}
 		}
 	}
 
@@ -231,6 +223,13 @@ public class Person : MonoBehaviour {
 	void UnregisterWithPlatform() {
 		currentPlatform.UnregisterPerson (this);
 		status = PersonStatus.MovingToFoyer;
+	}
+
+	public void OnTrainLeaveStation() {
+		Component.Destroy (rb);
+		transform.parent = currentPlatform.incomingTrain.transform;
+		status = PersonStatus.SatDown;
+		//TODO unregister from platform!!!!!!
 	}
 
 	void OnDrawGizmos() {

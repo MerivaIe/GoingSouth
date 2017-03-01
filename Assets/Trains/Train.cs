@@ -5,13 +5,14 @@ using System.Linq;
 
 public class Train : MonoBehaviour {
 
-	public float speed = 10f, length, boardingDuration = 10f, accelerationMultiplier = 4f;
+	public float speed = 10f, boardingDuration = 10f, accelerationMultiplier = 2f;
 	public enum TrainStatus {EnteringStation,Braking,BoardingTime,Accelerating,LeavingStation,Idle}
 	public TrainStatus status;
 	public Vector3 direction;	//this should eventually be replaced with just transform.forward everywhere
 	public Color color;
 	public SphereCollider[] doors {get; private set;}	//has to be collider so that transform is queried once train reaches platform
 	public BoxCollider boardingTrigger { get; private set; }
+	public float length { get; private set; }
 
 	private Rigidbody rb;
 	private float totalDistance, startPosX, startSpeedX;
@@ -50,6 +51,7 @@ public class Train : MonoBehaviour {
 		case TrainStatus.Accelerating:
 			//TODO: add a grippy floor on departure so that you get people jerking rather than just flooding to back... see how this affects physocs too
 			if (rb.velocity.x >= speed) {
+				OnLeaveStation ();
 				status = TrainStatus.LeavingStation;
 			} else {
 				newVelocity.x = SmoothlyAccelerateToTargetSpeed (speed);
@@ -111,5 +113,14 @@ public class Train : MonoBehaviour {
 		startSpeedX = direction.x * 0.1f;
 		totalDistance = length * accelerationMultiplier;
 		status = TrainStatus.Accelerating;
+	}
+
+	void OnLeaveStation() {
+		int layerMask = 1 << LayerMask.NameToLayer ("People");
+		Person[] peopleInTrain = Physics.OverlapBox (boardingTrigger.bounds.center, boardingTrigger.bounds.extents, Quaternion.identity, layerMask).Select (a => a.gameObject.GetComponent <Person> ()).ToArray ();
+		Debug.Log ("Found " + peopleInTrain.Count () + " people in train.");
+		foreach (Person person in peopleInTrain) {
+			person.OnTrainLeaveStation ();
+		}
 	}
 }
