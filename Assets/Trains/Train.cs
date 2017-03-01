@@ -5,7 +5,7 @@ using System.Linq;
 
 public class Train : MonoBehaviour {
 
-	public float speed = 10f, length, boardingDuration = 10f, accelerationMultiplier = 4f, boardingEndTime;
+	public float speed = 10f, length, boardingDuration = 10f, accelerationMultiplier = 4f, boardingCriticalTime;
 	public enum TrainStatus {EnteringStation,Braking,BoardingTime,Accelerating,LeavingStation,Idle}
 	public TrainStatus status;
 	public Vector3 direction;	//this should eventually be replaced with just transform.forward everywhere
@@ -52,6 +52,7 @@ public class Train : MonoBehaviour {
 			}
 			break;
 		case TrainStatus.Accelerating:
+			//TODO: add a grippy floor on departure so that you get people jerking rather than just flooding to back... see how this affects physocs too
 			if (rb.velocity.x >= speed) {
 				status = TrainStatus.LeavingStation;
 			} else {
@@ -92,7 +93,7 @@ public class Train : MonoBehaviour {
 	void SetBoardingTime() {
 		animator.ResetTrigger ("doorOpen");
 		status = TrainStatus.BoardingTime;
-		boardingEndTime = Time.time + boardingDuration;
+		boardingCriticalTime = Time.time + boardingDuration*0.75f;
 		Invoke ("CloseDoors", boardingDuration);
 	}
 
