@@ -62,12 +62,13 @@ public class Person : MonoBehaviour {
 
 		if (currentPlatform && currentPlatform.incomingTrain.status == Train.TrainStatus.BoardingTime) {
 			if (status == PersonStatus.FindingSeat) {
-				if (rb.mass == 10f && Vector3.Angle (transform.up,Vector3.up)<30f) {
+				if (rb.mass == 10f && Vector3.Angle (transform.up,Vector3.up)<30f) {	//if this is one of the light people and they are standing then add up force for crowd surfing
 					rb.AddForce (Vector3.up,ForceMode.Acceleration);
 				}
 				return;
 			}
-			if (status == PersonStatus.ReadyToBoard) {	//this will execute just once when train arrives to ready person
+			//this will execute just once if train is at station to ready person: could be done in a one off method called by either train at arrival time or platform if someone arrives and train is here
+			if (status == PersonStatus.ReadyToBoard) {
 				SetAgentControl (false);
 				SetDoorTarget ();
 				transform.LookAt (trainTarget);	//maybe look at random target? or smoother
@@ -76,16 +77,9 @@ public class Person : MonoBehaviour {
 			//handle boarding situations (getting to door using force/velocity, getting into train using force)
 			Vector3 boardingVector = trainTarget - transform.position;
 			boardingVector.y = 0f;
-			if (status == PersonStatus.MovingToTrainDoor) {
-				if (boardingVector.sqrMagnitude > sqrTargetThreshold) {							//if still far from door
-					if (Time.time > nextProximityCheck) {										//check proximity periodically to set boarding by velocity or by force
-						boardUsingForce = !IsDirectionClear (boardingVector.normalized);
-						nextProximityCheck = Time.time + checkProximityEvery;
-					}
-				} else {																		//else close to the door so shift target inside train
-					trainTarget.z += 2f * currentPlatform.incomingTrain.transform.localScale.z;	//TEST WITH JUST ONE PERSON AND DEBUG DRAW THE TRAIN TARGETS TO MAKE SURE THEY LOOK OK
-					status = PersonStatus.BoardingTrain;
-				}
+			if (status == PersonStatus.MovingToTrainDoor && Time.time > nextProximityCheck) {
+				boardUsingForce = !IsDirectionClear (boardingVector.normalized);	//check proximity periodically to set boarding by velocity or by force
+				nextProximityCheck = Time.time + checkProximityEvery;
 			}
 			if (status == PersonStatus.BoardingTrain || boardUsingForce) {
 				MoveUsingForce (boardingVector);
@@ -146,10 +140,15 @@ public class Person : MonoBehaviour {
 						status = PersonStatus.MovingToFoyer;	//currently unhandled
 					}
 				}
-			} else if (status == PersonStatus.FindingSeat && coll.GetType () == typeof(SphereCollider)) {	//person is being pushed back out of train so make them apply boarding force again TODO: non-critical: this doesnt work if nearly all people board from one side
-				Vector3 offset = transform.position - coll.bounds.center;
-				if (IsDirectionClear (-offset)) {	//if it is clear behind the person then push
-					trainTarget = transform.position + offset;
+			} else if (coll.GetType () == typeof(SphereCollider)) {	//person is being pushed back out of train so make them apply boarding force again TODO: non-critical: this doesnt work if nearly all people board from one side
+				if (status == PersonStatus.FindingSeat) {
+					Vector3 offset = transform.position - coll.bounds.center;
+					if (IsDirectionClear (-offset)) {	//if it is clear behind the person then push
+						trainTarget = transform.position + offset;
+						status = PersonStatus.BoardingTrain;
+					}
+				} else if (status == PersonStatus.MovingToTrainDoor) {
+					trainTarget.z += 2f * currentPlatform.incomingTrain.transform.localScale.z;
 					status = PersonStatus.BoardingTrain;
 				}
 			} else if (coll.CompareTag ("KillingTrigger") && coll.gameObject.GetComponentInParent <Rigidbody> ().velocity.sqrMagnitude > sqrMagDeathVelocity) {

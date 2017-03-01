@@ -88,6 +88,9 @@ public class Train : MonoBehaviour {
 	
 	void SetBoardingTime() {
 		animator.ResetTrigger ("doorOpen");
+		foreach (SphereCollider door in doors) {
+			door.enabled = true;
+		}
 		status = TrainStatus.BoardingTime;
 		Invoke ("CloseDoors", boardingDuration);
 	}
@@ -97,6 +100,9 @@ public class Train : MonoBehaviour {
 		status = TrainStatus.Idle;
 		rb.constraints &= ~RigidbodyConstraints.FreezePositionX;	//Remove freeze x position (and let the carriage drift slightly)
 		rb.velocity = -0.01f * speed * direction;
+		foreach (SphereCollider door in doors) {
+			door.enabled = false;
+		}
 		Invoke ("Depart", 2f);
 	}
 
