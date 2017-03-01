@@ -5,7 +5,7 @@ using System.Linq;
 
 public class Train : MonoBehaviour {
 
-	public float speed = 10f, boardingDuration = 10f, accelerationMultiplier = 2f;
+	public float speed = 40f, boardingDuration = 10f, accelerationModifier = 4f;
 	public enum TrainStatus {EnteringStation,Braking,BoardingTime,Accelerating,LeavingStation,Idle}
 	public TrainStatus status;
 	public Vector3 direction;	//this should eventually be replaced with just transform.forward everywhere
@@ -49,9 +49,7 @@ public class Train : MonoBehaviour {
 			}
 			break;
 		case TrainStatus.Accelerating:
-			//TODO: add a grippy floor on departure so that you get people jerking rather than just flooding to back... see how this affects physocs too
 			if (rb.velocity.x >= speed) {
-				OnLeaveStation ();
 				status = TrainStatus.LeavingStation;
 			} else {
 				newVelocity.x = SmoothlyAccelerateToTargetSpeed (speed);
@@ -66,7 +64,7 @@ public class Train : MonoBehaviour {
 			}
 			break;
 		}
-		rb.velocity = newVelocity;
+		if (rb.velocity != newVelocity) {rb.velocity = newVelocity;}
 	}
 
 	float SmoothlyAccelerateToTargetSpeed (float targetSpeed)	//this is not actually linear because interval is dependent on distance
@@ -102,23 +100,23 @@ public class Train : MonoBehaviour {
 		status = TrainStatus.Idle;
 		rb.constraints &= ~RigidbodyConstraints.FreezePositionX;	//Remove freeze x position (and let the carriage drift slightly)
 		rb.velocity = -0.01f * speed * direction;
-		foreach (SphereCollider door in doors) {
-			door.enabled = false;
-		}
 		Invoke ("Depart", 2f);
 	}
 
 	void Depart() {
 		animator.ResetTrigger ("doorClose");
+		foreach (SphereCollider door in doors) {
+			door.enabled = false;
+		}
+		HandlePeopleOnboard ();
 		startSpeedX = direction.x * 0.1f;
-		totalDistance = length * accelerationMultiplier;
+		totalDistance = length * accelerationModifier;
 		status = TrainStatus.Accelerating;
 	}
 
-	void OnLeaveStation() {
+	void HandlePeopleOnboard() {
 		int layerMask = 1 << LayerMask.NameToLayer ("People");
 		Person[] peopleInTrain = Physics.OverlapBox (boardingTrigger.bounds.center, boardingTrigger.bounds.extents, Quaternion.identity, layerMask).Select (a => a.gameObject.GetComponent <Person> ()).ToArray ();
-		Debug.Log ("Found " + peopleInTrain.Count () + " people in train.");
 		foreach (Person person in peopleInTrain) {
 			person.OnTrainLeaveStation ();
 		}

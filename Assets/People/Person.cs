@@ -60,12 +60,13 @@ public class Person : MonoBehaviour {
 	void FixedUpdate() {
 		if (status == PersonStatus.MovingToPlatform || status == PersonStatus.Compromised || status == PersonStatus.SatDown) {return;}	//could this be made quicker using bitwise operations on enum flags?
 
-		if (currentPlatform && currentPlatform.incomingTrain.status == Train.TrainStatus.BoardingTime) {
+		switch (currentPlatform.incomingTrain.status) {
+		case Train.TrainStatus.BoardingTime:
 			if (status == PersonStatus.FindingSeat) {
-				if (rb.mass == 10f && Vector3.Angle (transform.up,Vector3.up)<30f) {	//if this is a light person and they are standing then add up force for crowd surfing
-					rb.AddForce (Vector3.up,ForceMode.Acceleration);
+				if (rb.mass == 10f && Vector3.Angle (transform.up, Vector3.up) < 30f) {	//if this is a light person and they are standing then add up force for crowd surfing
+					rb.AddForce (Vector3.up, ForceMode.Acceleration);
 				}
-				return;
+				break;
 			}
 			//this will execute just once if train is at station to ready person: could be done in a one off method called by either train at arrival time or platform if someone arrives and train is here... increases complexity of model but performance would likely improve
 			if (status == PersonStatus.ReadyToBoard) {
@@ -87,7 +88,9 @@ public class Person : MonoBehaviour {
 				rb.drag = 0f;
 				rb.velocity = nmAgent.speed * boardingVector.normalized;
 			}
-		} else if (currentPlatform.incomingTrain.status == Train.TrainStatus.Accelerating) {	//else train has just set off [handle people who didn't board]
+			break;
+		case Train.TrainStatus.Accelerating:	//else train has just set off [handle people who didn't board]
+		case Train.TrainStatus.LeavingStation:
 //			NavMeshHit hit;
 //			if (status == PersonStatus.BoardingTrain || status == PersonStatus.MovingToTrainDoor) {	//if these statuses are hit we were unsuccessful boarding train so reset
 //				//get closest point on navmesh and move towards it
@@ -108,13 +111,19 @@ public class Person : MonoBehaviour {
 //					status = PersonStatus.ReadyToBoard;
 //				}
 //			}
-//			if (status == PersonStatus.ReadyToBoard) {
-//				if ((platformTarget - transform.position).sqrMagnitude < 0.01f && nmAgent.enabled) {	//if distance to target is very small
-//					SetAgentControl (false);
-//				}
-//			}
-			//if we are just waiting for train to arrive at our platform target then use physics control to nudge towards our target?
-			//if they have been waiting for more than 5 seconds they get a nearby location and move. or just shuffle their looking at.
+			break;
+		case Train.TrainStatus.EnteringStation:
+		case Train.TrainStatus.Braking:	////////////////////////////////maybe use this to get back to the platform target rather than reactivating the navmesh in complicated fashion above. Need to also make it so that people fall off platform
+			if (status == PersonStatus.ReadyToBoard) {
+				Vector3 toTarget = platformTarget - transform.position;
+				if (Mathf.Pow (toTarget.x, 2f) + Mathf.Pow (toTarget.z, 2f) < 0.01f && nmAgent.enabled) {	//if distance to target is very small (checking xz plane sqrMagnitude)
+					SetAgentControl (false);
+				} else {
+					//rb.AddForce (toTarget.normalized * 0.1f);	//nudge back to target
+					rb.velocity = toTarget.normalized * nmAgent.speed;
+				}
+			}
+			break;
 		}
 	}
 
@@ -140,7 +149,7 @@ public class Person : MonoBehaviour {
 						status = PersonStatus.BoardingTrain;
 					}
 				} else if (status == PersonStatus.MovingToTrainDoor) {
-					trainTarget.z += 2f * currentPlatform.incomingTrain.transform.localScale.z;
+					trainTarget.z += 2f * currentPlatform.incomingTrain.transform.localScale.z;	//perhaps train width if we ever go wider trains
 					status = PersonStatus.BoardingTrain;
 				}
 			} else if (coll.CompareTag ("KillingTrigger") && coll.gameObject.GetComponentInParent <Rigidbody> ().velocity.sqrMagnitude > sqrMagDeathVelocity) {
