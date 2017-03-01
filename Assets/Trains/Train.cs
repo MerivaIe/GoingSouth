@@ -6,7 +6,7 @@ using System.Linq;
 public class Train : MonoBehaviour {
 
 	public float speed = 10f, length, boardingDuration = 10f, accelerationMultiplier = 4f, boardingEndTime;
-	public enum TrainStatus {Moving,Braking,BoardingTime,Accelerating,Idle}
+	public enum TrainStatus {EnteringStation,Braking,BoardingTime,Accelerating,LeavingStation,Idle}
 	public TrainStatus status;
 	public Vector3 direction;	//this should eventually be replaced with just transform.forward everywhere
 	public Color color;
@@ -23,7 +23,7 @@ public class Train : MonoBehaviour {
 		length = 20f; 				//TODO hard coded
 		animator = GetComponent <Animator>();
 		status = TrainStatus.Idle;
-		//select color randomly from set of remaining? or should that be decided by GameManager
+		//select color that be decided by GameManager for that destination
 		//Color RandomColor() {
 		//	return new Color(Random.value, Random.value, Random.value);
 		//}
@@ -53,7 +53,7 @@ public class Train : MonoBehaviour {
 			break;
 		case TrainStatus.Accelerating:
 			if (rb.velocity.x >= speed) {
-				status = TrainStatus.Moving;
+				status = TrainStatus.LeavingStation;
 			} else {
 				newVelocity.x = SmoothlyAccelerateToTargetSpeed (speed);
 				//potentially Mathf.SmoothDamp( should be used for this
@@ -62,10 +62,8 @@ public class Train : MonoBehaviour {
 		case TrainStatus.Idle:
 			if (transform.position.x < -50f) {	//temp code to provide constant velocity when out of station
 				direction = Vector3.right;
-				startSpeedX = direction.x * 0.1f;
-				startPosX = transform.position.x;
-				totalDistance = length;
-				status = TrainStatus.Accelerating;
+				newVelocity.x = speed;
+				status = TrainStatus.EnteringStation;
 			}
 			break;
 		}

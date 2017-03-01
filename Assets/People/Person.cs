@@ -28,6 +28,7 @@ public class Person : MonoBehaviour {
 	private float nextProximityCheck = 0f, defaultBoardingForce;
 	private bool boardUsingForce = false;
 	private SphereCollider boardingTrigger;
+	private List<SphereCollider> allBoardingTriggers;
 
 	void Start () {
 		rb = GetComponent <Rigidbody> ();
@@ -41,6 +42,8 @@ public class Person : MonoBehaviour {
 //		} else {
 //			rb.mass = 10f;
 //		}
+
+
 		if (testMode) {
 			try {
 				nmAgent.SetDestination(currentPlatform.transform.position);
@@ -68,7 +71,15 @@ public class Person : MonoBehaviour {
 	void FixedUpdate() {
 		if (status == PersonStatus.MovingToPlatform || status == PersonStatus.Compromised || status == PersonStatus.SatDown) {return;}	//could this be made quicker using bitwise operations on enum flags?
 
-		if (currentPlatform && currentPlatform.incomingTrain.status == Train.TrainStatus.BoardingTime && status != PersonStatus.FindingSeat) {
+		if (currentPlatform && currentPlatform.incomingTrain.status == Train.TrainStatus.BoardingTime) {
+			if (status == PersonStatus.FindingSeat) {
+				if (rb.mass == 10f && Random.value > 0.999 && Vector3.Angle (transform.up,Vector3.up)<20) {
+					rb.AddForce (500*Vector3.up,ForceMode.Acceleration);
+					Debug.DrawLine (transform.position, transform.position + 2*Vector3.up,Color.green,0.5f);
+				}
+				return;
+			}
+			///////////////perhaps try a constant force until they are flat here.....
 			if (status == PersonStatus.ReadyToBoard) {	//this will execute just once when train arrives to ready person
 				SetAgentControl (false);
 				SetDoorTarget ();
@@ -90,9 +101,6 @@ public class Person : MonoBehaviour {
 				}
 			}
 			if (status == PersonStatus.BoardingTrain || boardUsingForce) {
-//				if (currentPlatform.incomingTrain.boardingEndTime - Time.time < 1f) {	//didnt really work
-//					boardingForce = 2f * defaultBoardingForce;
-//				}
 				MoveUsingForce (boardingVector);
 			} else {
 				rb.drag = 0f;
@@ -126,14 +134,14 @@ public class Person : MonoBehaviour {
 //			}
 			//if we are just waiting for train to arrive at our platform target then use physics control to nudge towards our target?
 			//if they have been waiting for more than 5 seconds they get a nearby location and move. or just shuffle their looking at.
-		} else if (currentPlatform.incomingTrain.status == Train.TrainStatus.Moving) {	//else train has set off fully [handle people on train]
-//			if (currentPlatform.incomingTrain.boardingTrigger.bounds.Contains (transform.position)) {	//TODO: THIS IS CALLED THE WHOLE TIME TRAIN IS MOVING... IMPROVE AFTER YOU HAVE FIXED BOAREDING
-//				Component.Destroy (rb);
-//				transform.parent = currentPlatform.incomingTrain.transform;
-//				status = PersonStatus.SatDown;
-//				//TODO unregister from platform!!!!!!
-//				return;
-//			}
+		} else if (currentPlatform.incomingTrain.status == Train.TrainStatus.LeavingStation) {	//else train has set off fully [handle people on train]
+			if (currentPlatform.incomingTrain.boardingTrigger.bounds.Contains (transform.position)) {	//TODO: THIS IS CALLED THE WHOLE TIME TRAIN IS MOVING... IMPROVE AFTER YOU HAVE FIXED BOAREDING
+				Component.Destroy (rb);
+				transform.parent = currentPlatform.incomingTrain.transform;
+				status = PersonStatus.SatDown;
+				//TODO unregister from platform!!!!!!
+				return;
+			}
 		}
 	}
 
@@ -156,8 +164,9 @@ public class Person : MonoBehaviour {
 						status = PersonStatus.MovingToFoyer;	//currently unhandled
 					}
 				}
-			//} else if (status == PersonStatus.FindingSeat && coll.gameObject.GetComponentInParent<Door>()) {
-				//status = PersonStatus.BoardingTrain;
+			} else if (status == PersonStatus.FindingSeat && (coll == allBoardingTriggers[0] || coll == allBoardingTriggers[1])) {
+				trainTarget = transform.position + (transform.position - coll.bounds.center);
+				status = PersonStatus.BoardingTrain;
 				////rb.constraints = RigidbodyConstraints.FreezePositionY;
 			} else if (coll.CompareTag ("KillingTrigger") && coll.gameObject.GetComponentInParent <Rigidbody> ().velocity.sqrMagnitude > sqrMagDeathVelocity) {
 				status = PersonStatus.Compromised;
@@ -187,9 +196,14 @@ public class Person : MonoBehaviour {
 
 		if (status == PersonStatus.BoardingTrain && coll == boardingTrigger && currentPlatform && currentPlatform.incomingTrain.boardingTrigger.bounds.Contains (transform.position)) {
 			rb.drag = 0f;
+			if (Random.value > 0.5f) {
+				rb.centerOfMass = new Vector3 (0f, centreOfMassYOffset, 0f);
+			} else {
+				rb.mass = 10f;
+			}
 			rb.constraints = RigidbodyConstraints.None;
 			status = PersonStatus.FindingSeat;
-			IgnoreBoardingColliders (false);
+			//IgnoreBoardingColliders (false);
 		}
 	}
 
@@ -211,6 +225,7 @@ public class Person : MonoBehaviour {
 		float dragModifier = Mathf.Sin (0.5f * angleDiff);
 		rb.drag = dragModifier * dragBase;	//maybe do this only when outside the train
 		rb.AddForce (boardingForce * boardingVector.normalized, ForceMode.Acceleration);
+		//rb.AddForceAtPosition (boardingForce * boardingVector.normalized,rb.centerOfMass,ForceMode.Acceleration);
 	}
 
 	void SetAgentControl(bool turnOn) {
@@ -261,6 +276,14 @@ public class Person : MonoBehaviour {
 
 	void RegisterWithPlatform ()
 	{
+		allBoardingTriggers = new List<SphereCollider>();
+		foreach (GameObject doorGO in currentPlatform.incomingTrain.doors) {
+			foreach (SphereCollider coll in doorGO.GetComponentsInChildren <SphereCollider>()) {
+				if (coll.isTrigger) {
+					allBoardingTriggers.Add (coll);
+				}
+			}
+		}
 		IgnoreBoardingColliders (true);
 		platformTarget = currentPlatform.RegisterPerson (this);
 	}

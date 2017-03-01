@@ -31,7 +31,7 @@ public class BoardingArm : MonoBehaviour {
 			myConstantForce.enabled = true;
 			boarding = true;
 			//TODO the following should be done once something has decided train is ready to depart... Platform? After wait time.
-		} else if (incomingTrain && incomingTrain.status == Train.TrainStatus.Moving && boarding == true) {
+		} else if (incomingTrain && incomingTrain.status == Train.TrainStatus.LeavingStation && boarding == true) {
 			Reset ();
 		}
 	}
