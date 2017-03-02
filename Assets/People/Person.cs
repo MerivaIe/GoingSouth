@@ -118,18 +118,35 @@ public class Person : MonoBehaviour {
 		case Train.TrainStatus.Accelerating:
 		case Train.TrainStatus.LeavingStation:
 		case Train.TrainStatus.EnteringStation:
-		case Train.TrainStatus.Braking:	////////////////////////////////maybe use this to get back to the platform target rather than reactivating the navmesh in complicated fashion above. Need to also make it so that people fall off platform
+		case Train.TrainStatus.Braking:	/////////////////////////maybe use this to get back to the platform target rather than reactivating the navmesh in complicated fashion above. Need to also make it so that people fall off platform
 			if (status == PersonStatus.MovingToTrainDoor || status == PersonStatus.BoardingTrain) {
-				rb.drag = 0f;
 				status = PersonStatus.ReadyToBoard;
 			}
-			if (status == PersonStatus.ReadyToBoard) {
+//			if (status == PersonStatus.ReadyToBoard && Time.time > nextProximityCheck) {	//potentially use spring joint?
+//				rb.drag = 5f;
+//				Vector3 toTarget = platformTarget - transform.position;
+//				if (toTarget.x * toTarget.x + toTarget.z * toTarget.z < 0.01f) {	//<0.1^2
+//					if (nmAgent.enabled) {			//if under agent control and close to target: turn off agent
+//						SetAgentControl (false);
+//					}
+//				} else {
+//					if (!nmAgent.enabled) {			//else under physics control and not close: nudge towards target
+//						rb.AddForce (toTarget.normalized * nudgeForce, ForceMode.VelocityChange);
+//					}
+//				}
+//				nextProximityCheck = Time.time + checkProximityEvery;
+//			}
+			if (status == PersonStatus.ReadyToBoard) {					// this oscillates..fix
+
 				Vector3 toTarget = platformTarget - transform.position;
-				bool xzClose = toTarget.x * toTarget.x + toTarget.z * toTarget.z < 0.01f;	//<0.1^2
-				if (nmAgent.enabled && xzClose) {			//if under agent control and close to target: turn off agent
-					SetAgentControl (false);
-				} else if (!nmAgent.enabled && !xzClose && rb.velocity.sqrMagnitude < nmAgent.speed*nmAgent.speed) {	//else under physics control and not close: nudge towards target
-					rb.AddForce (toTarget.normalized * nudgeForce, ForceMode.Acceleration);
+				if (toTarget.x * toTarget.x + toTarget.z * toTarget.z < 0.01f) {	//<0.1^2
+					if (nmAgent.enabled) {			//if under agent control and close to target: turn off agent
+						SetAgentControl (false);
+					}
+				} else {
+					if (!nmAgent.enabled) {
+						rb.velocity = toTarget.normalized * nmAgent.speed;
+					}
 				}
 			}
 			break;
@@ -227,6 +244,8 @@ public class Person : MonoBehaviour {
 
 	void DeathKnell() {
 		SetAgentControl (false);	//turn their kinematic and nmagent off ready for beautiful physics interactions
+		rb.ResetCenterOfMass ();
+		rb.drag = 0f;
 		rb.constraints = RigidbodyConstraints.None;
 		//TODO do we need to unregister from platform
 	}
