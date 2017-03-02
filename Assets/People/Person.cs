@@ -17,13 +17,14 @@ public class Person : MonoBehaviour {
 	public string destination{ get; private set; }
 	public TimetableItem timetableItem;	//this will replace the destination field above
 	public Platform currentPlatform;
-	public float sqrMagDeathVelocity = 1f, boardingForce = 20f, dragBase = 20f, checkProximityEvery = 0.5f,proximityDistance = 0.5f, centreOfMassYOffset = 0f;
+	public float sqrMagDeathVelocity = 1f, boardingForce = 20f, nudgeForce = 1f, dragBase = 20f, checkProximityEvery = 0.5f,proximityDistance = 0.5f, centreOfMassYOffset = 0f;
 	public static float sqrTargetThreshold = 4f;
 
 	private NavMeshAgent nmAgent;
 	private NavMeshObstacle nmObstacle;
 	private Rigidbody rb;
 	private Vector3 platformTarget, trainTarget;
+	private static GameObject organisingParent;
 	private static float[] proximityAngles;
 	private float nextProximityCheck = 0f;
 	private bool boardUsingForce = false;
@@ -33,6 +34,8 @@ public class Person : MonoBehaviour {
 		nmAgent = GetComponent <NavMeshAgent>();
 		nmObstacle = GetComponent <NavMeshObstacle> ();
 		destination = "Bristol";	//TODO hard coded
+		nmAgent.speed = Random.Range(2f,5f);
+		rb.centerOfMass = new Vector3(0f,centreOfMassYOffset,0f);
 		if (testMode) {
 			try {
 				nmAgent.SetDestination(currentPlatform.transform.position);
@@ -89,8 +92,8 @@ public class Person : MonoBehaviour {
 				rb.velocity = nmAgent.speed * boardingVector.normalized;
 			}
 			break;
-		case Train.TrainStatus.Accelerating:	//else train has just set off [handle people who didn't board]
-		case Train.TrainStatus.LeavingStation:
+		//case Train.TrainStatus.Accelerating:	//else train has just set off [handle people who didn't board]
+		//case Train.TrainStatus.LeavingStation:
 //			NavMeshHit hit;
 //			if (status == PersonStatus.BoardingTrain || status == PersonStatus.MovingToTrainDoor) {	//if these statuses are hit we were unsuccessful boarding train so reset
 //				//get closest point on navmesh and move towards it
@@ -111,16 +114,22 @@ public class Person : MonoBehaviour {
 //					status = PersonStatus.ReadyToBoard;
 //				}
 //			}
-			break;
+			//break;
+		case Train.TrainStatus.Accelerating:
+		case Train.TrainStatus.LeavingStation:
 		case Train.TrainStatus.EnteringStation:
 		case Train.TrainStatus.Braking:	////////////////////////////////maybe use this to get back to the platform target rather than reactivating the navmesh in complicated fashion above. Need to also make it so that people fall off platform
+			if (status == PersonStatus.MovingToTrainDoor || status == PersonStatus.BoardingTrain) {
+				rb.drag = 0f;
+				status = PersonStatus.ReadyToBoard;
+			}
 			if (status == PersonStatus.ReadyToBoard) {
 				Vector3 toTarget = platformTarget - transform.position;
-				if (Mathf.Pow (toTarget.x, 2f) + Mathf.Pow (toTarget.z, 2f) < 0.01f && nmAgent.enabled) {	//if distance to target is very small (checking xz plane sqrMagnitude)
+				bool xzClose = toTarget.x * toTarget.x + toTarget.z * toTarget.z < 0.01f;	//<0.1^2
+				if (nmAgent.enabled && xzClose) {			//if under agent control and close to target: turn off agent
 					SetAgentControl (false);
-				} else {
-					//rb.AddForce (toTarget.normalized * 0.1f);	//nudge back to target
-					rb.velocity = toTarget.normalized * nmAgent.speed;
+				} else if (!nmAgent.enabled && !xzClose && rb.velocity.sqrMagnitude < nmAgent.speed*nmAgent.speed) {	//else under physics control and not close: nudge towards target
+					rb.AddForce (toTarget.normalized * nudgeForce, ForceMode.Acceleration);
 				}
 			}
 			break;
@@ -162,10 +171,9 @@ public class Person : MonoBehaviour {
 	void OnTriggerExit(Collider coll) {
 		if (status == PersonStatus.BoardingTrain && coll.GetType () == typeof(SphereCollider) && currentPlatform && currentPlatform.incomingTrain.boardingTrigger.bounds.Contains (transform.position)) {
 			rb.drag = 0f;
-			if (Random.value > 0.33f) {
-				rb.centerOfMass = new Vector3 (0f, centreOfMassYOffset, 0f);
-			} else {
+			if (Random.value > 0.67f) {	//3rd chance of making a light person (for crowdsurfing)
 				rb.mass = 10f;
+				rb.ResetCenterOfMass ();
 			}
 			rb.constraints = RigidbodyConstraints.None;
 			status = PersonStatus.FindingSeat;
@@ -215,7 +223,6 @@ public class Person : MonoBehaviour {
 			}
 		}
 		trainTarget = doorLocations[closestTargetIndex];
-		//trainTarget.z += 1.25f * -currentPlatform.incomingTrain.transform.localScale.z;	//shift the target out a bit so people are not grinding against train trying to get to door
 	}
 
 	void DeathKnell() {
@@ -230,7 +237,7 @@ public class Person : MonoBehaviour {
 	}
 
 	void UnregisterWithPlatform() {
-		currentPlatform.UnregisterPerson (this);
+		currentPlatform.UnregisterPerson (this);	//////////do this whenever someone leaves platform and free up their location
 		status = PersonStatus.MovingToFoyer;
 	}
 
@@ -241,10 +248,19 @@ public class Person : MonoBehaviour {
 		//TODO unregister from platform!!!!!!
 	}
 
-	void OnDrawGizmos() {
-		if (trainTarget != null) {
-			Gizmos.color = Color.green;
-			Gizmos.DrawSphere (trainTarget, 0.1f);
+	public void SetMovingToPlatform(Vector3 optionalPlatformTarget) {
+		SetAgentControl (true);	//may jerk them up... change this to after a recovery period once they have stood up?
+		nmAgent.SetDestination (optionalPlatformTarget);
+		status = PersonStatus.MovingToPlatform;	
+	}
+	public void SetMovingToPlatform() {
+		if (platformTarget == null) {
+			Debug.LogWarning ("No platform target provided by caller and we do not have one already stored. Please specify platform target using overloaded method.");
+			//TODO maybe return to foyer/default
+		} else {
+			SetAgentControl (true);	//may jerk them up... change this to after a recovery period once they have stood up?
+			nmAgent.SetDestination (platformTarget);
+			status = PersonStatus.MovingToPlatform;	//what if they hit it from foyer
 		}
 	}
 }
