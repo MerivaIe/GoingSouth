@@ -17,17 +17,18 @@ public class Person : MonoBehaviour {
 	public string destination{ get; private set; }
 	public TimetableItem timetableItem;	//this will replace the destination field above
 	public Platform currentPlatform;
-	public float sqrMagDeathVelocity = 1f, boardingForce = 20f, nudgeForce = 1f, dragBase = 20f, checkProximityEvery = 0.5f,proximityDistance = 0.5f, centreOfMassYOffset = 0f;
+	public float sqrMagDeathVelocity = 1f, boardingForce = 20f, nudgeForce = 1f, dragBase = 20f, checkingInterval = 0.5f,proximityDistance = 0.5f, centreOfMassYOffset = 0f;
 	public static float sqrTargetThreshold = 4f;
+	public float tempDrag = 7.5f;
 
 	private NavMeshAgent nmAgent;
 	private NavMeshObstacle nmObstacle;
 	private Rigidbody rb;
-	private Vector3 platformTarget, trainTarget;
+	private Vector3 platformTarget, trainTarget, toPlatformTarget;
 	private static GameObject organisingParent;
 	private static float[] proximityAngles;
-	private float nextProximityCheck = 0f;
-	private bool boardUsingForce = false;
+	private float nextCheckTime = 0f;
+	private bool boardUsingForce = false, atPlatformTarget = false;
 
 	void Start () {
 		rb = GetComponent <Rigidbody> ();
@@ -36,6 +37,7 @@ public class Person : MonoBehaviour {
 		destination = "Bristol";	//TODO hard coded
 		nmAgent.speed = Random.Range(2f,5f);
 		rb.centerOfMass = new Vector3(0f,centreOfMassYOffset,0f);
+		toPlatformTarget.y = 0f;	//we will only ever modify the xz
 		if (testMode) {
 			try {
 				nmAgent.SetDestination(currentPlatform.transform.position);
@@ -81,9 +83,9 @@ public class Person : MonoBehaviour {
 			//handle boarding situations (getting to door using force/velocity, getting into train using force)
 			Vector3 boardingVector = trainTarget - transform.position;
 			boardingVector.y = 0f;
-			if (status == PersonStatus.MovingToTrainDoor && Time.time > nextProximityCheck) {
+			if (status == PersonStatus.MovingToTrainDoor && Time.time > nextCheckTime) {
 				boardUsingForce = !IsDirectionClear (boardingVector.normalized);	//check proximity periodically to set boarding by velocity or by force
-				nextProximityCheck = Time.time + checkProximityEvery;
+				nextCheckTime = Time.time + checkingInterval;
 			}
 			if (status == PersonStatus.BoardingTrain || boardUsingForce) {
 				MoveUsingForce (boardingVector);
@@ -92,61 +94,37 @@ public class Person : MonoBehaviour {
 				rb.velocity = nmAgent.speed * boardingVector.normalized;
 			}
 			break;
-		//case Train.TrainStatus.Accelerating:	//else train has just set off [handle people who didn't board]
-		//case Train.TrainStatus.LeavingStation:
-//			NavMeshHit hit;
-//			if (status == PersonStatus.BoardingTrain || status == PersonStatus.MovingToTrainDoor) {	//if these statuses are hit we were unsuccessful boarding train so reset
-//				//get closest point on navmesh and move towards it
-//				NavMesh.SamplePosition (transform.position, out hit, nmAgent.height, NavMesh.AllAreas);--use bit shifting now that you understans
-//				Vector3 returnVector = hit.position - transform.position;
-//				if (returnVector.sqrMagnitude > 0.001f) {	//if not quite or not on navmesh
-//					rb.velocity = returnVector.normalized * nmAgent.speed;
-//				}
-//				//TODO when you have internet: get people to stand up...Quaternion.FromToRotation (transform.up, Vector3.up)?...rb.AddTorque ()?
-//				status = PersonStatus.BoardingFailed;
-//			}
-//			if (status == PersonStatus.BoardingFailed) {
-//				//!!!!!!!!!!!!!!!!!!!!!!!add returnVector here.. otherwise we just have one pump
-//				if (NavMesh.SamplePosition (transform.position, out hit, nmAgent.radius + 0.001f, NavMesh.AllAreas)) {	//else target still far away or nmAgent not enabled [TODO if they have come off the navmesh then this will error- sort]
-//					SetAgentControl (true);
-//					nmAgent.SetDestination (platformTarget);
-//					//transform.LookAt (trainTarget);	//maybe look at random target?
-//					status = PersonStatus.ReadyToBoard;
-//				}
-//			}
-			//break;
+		case Train.TrainStatus.Idle:
 		case Train.TrainStatus.Accelerating:
 		case Train.TrainStatus.LeavingStation:
 		case Train.TrainStatus.EnteringStation:
-		case Train.TrainStatus.Braking:	/////////////////////////maybe use this to get back to the platform target rather than reactivating the navmesh in complicated fashion above. Need to also make it so that people fall off platform
-			if (status == PersonStatus.MovingToTrainDoor || status == PersonStatus.BoardingTrain) {
+		case Train.TrainStatus.Braking:	//Need to also make it so that people fall off platform
+			if (status == PersonStatus.MovingToTrainDoor || status == PersonStatus.BoardingTrain) {	//pick up anyone who failed to board train
 				status = PersonStatus.ReadyToBoard;
 			}
-//			if (status == PersonStatus.ReadyToBoard && Time.time > nextProximityCheck) {	//potentially use spring joint?
-//				rb.drag = 5f;
-//				Vector3 toTarget = platformTarget - transform.position;
-//				if (toTarget.x * toTarget.x + toTarget.z * toTarget.z < 0.01f) {	//<0.1^2
-//					if (nmAgent.enabled) {			//if under agent control and close to target: turn off agent
+			if (status == PersonStatus.ReadyToBoard) {
+//				if (Time.time > nextCheckTime) {
+//					toPlatformTarget = platformTarget - transform.position;
+//					toPlatformTarget.y = 0f;
+//					//may need to turn on drag
+//					atPlatformTarget = toPlatformTarget.sqrMagnitude < 0.01f;	//<0.1^2
+//					nextCheckTime = Time.time + checkingInterval;
+//					if (atPlatformTarget && nmAgent.enabled) {	//if under agent control and close to target: turn off agent
 //						SetAgentControl (false);
 //					}
-//				} else {
-//					if (!nmAgent.enabled) {			//else under physics control and not close: nudge towards target
-//						rb.AddForce (toTarget.normalized * nudgeForce, ForceMode.VelocityChange);
-//					}
 //				}
-//				nextProximityCheck = Time.time + checkProximityEvery;
-//			}
-			if (status == PersonStatus.ReadyToBoard) {					// this oscillates..fix
+//				if (!atPlatformTarget && !nmAgent.enabled) {	//else under physics control and not close: nudge towards target
+//					rb.AddForce (toPlatformTarget.normalized * nudgeForce, ForceMode.Acceleration);
+//				}
 
-				Vector3 toTarget = platformTarget - transform.position;
-				if (toTarget.x * toTarget.x + toTarget.z * toTarget.z < 0.01f) {	//<0.1^2
-					if (nmAgent.enabled) {			//if under agent control and close to target: turn off agent
-						SetAgentControl (false);
-					}
-				} else {
-					if (!nmAgent.enabled) {
-						rb.velocity = toTarget.normalized * nmAgent.speed;
-					}
+				toPlatformTarget.x = platformTarget.x - transform.position.x;
+				toPlatformTarget.z = platformTarget.z - transform.position.z;
+				rb.drag = tempDrag;
+				atPlatformTarget = toPlatformTarget.sqrMagnitude < 0.01f;	//<0.1^2
+				if (atPlatformTarget && nmAgent.enabled) {	//if under agent control and close to target: turn off agent
+					SetAgentControl (false);
+				} else if (!atPlatformTarget && !nmAgent.enabled) {	//else under physics control and not close: nudge towards target
+					rb.AddForce (toPlatformTarget.normalized * nudgeForce, ForceMode.Acceleration);
 				}
 			}
 			break;
@@ -213,8 +191,9 @@ public class Person : MonoBehaviour {
 	void MoveUsingForce(Vector3 boardingVector) {
 		float angleDiff = Mathf.Deg2Rad * Vector3.Angle (rb.velocity, boardingVector);	// provide a bit of drag to prevent oscillation around boarding vector
 		float dragModifier = Mathf.Sin (0.5f * angleDiff);
-		rb.drag = dragModifier * dragBase;	//maybe do this only when outside the train
-		rb.AddForce (boardingForce * boardingVector.normalized, ForceMode.Acceleration);
+		rb.drag = dragModifier * dragBase;					//do this only when outside the train
+		rb.AddForce (boardingForce * boardingVector.normalized, ForceMode.Acceleration);	//TODO: use the below but apply at transform.position at start of push and at transform.position + rb.centerOfMass at the end of the pushing... this will mean people are not flopping over at the start of pushing
+		//rb.AddForceAtPosition (boardingForce*boardingVector.normalized,transform.position,ForceMode.Acceleration);
 	}
 
 	void SetAgentControl(bool turnOn) {
