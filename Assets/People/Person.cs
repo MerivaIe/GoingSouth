@@ -30,7 +30,7 @@ public class Person : MonoBehaviour {
 	private float nextCheckTime = 0f;
 	private bool boardUsingForce = false, atPlatformTarget = false;
 
-	void Awake () {
+	void Awake () {	//needs to be Awake because Start() is not called before methods on instantiated gameObject it seems
 		rb = GetComponent <Rigidbody> ();
 		nmAgent = GetComponent <NavMeshAgent>();
 		nmObstacle = GetComponent <NavMeshObstacle> ();

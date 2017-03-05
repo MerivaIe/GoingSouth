@@ -31,10 +31,10 @@ public class GameManager : MonoBehaviour {
 	public static void GenerateTimetable(List<Destination> destinations) {	//decided by player: for each destination, avg time between trains
 		foreach (Destination destination in destinations) {
 			//do loop to add a train every x mins
-			//timetable.Add (new TimetableItem(0f,GameObject.Find("Platform (1)").GetComponent <Platform>(),GameObject.Find ("Train (1)").GetComponent <Train>(),"Bristol"));
-			//timetable.Add (new TimetableItem(0f,GameObject.Find("Platform (2)").GetComponent <Platform>(),GameObject.Find ("Train (2)").GetComponent <Train>(),"Bristol"));
-			//timetable.Add (new TimetableItem(0f,GameObject.Find("Platform (3)").GetComponent <Platform>(),GameObject.Find ("Train (3)").GetComponent <Train>(),"Bristol"));
-			//timetable.Add (new TimetableItem(0f,GameObject.Find("Platform (4)").GetComponent <Platform>(),GameObject.Find ("Train (4)").GetComponent <Train>(),"Bristol"));
+			timetable.Add (new TimetableItem(0f,GameObject.Find("Platform (1)").GetComponent <Platform>(),GameObject.Find ("Train (1)").GetComponent <Train>(),"Bristol"));
+			timetable.Add (new TimetableItem(0f,GameObject.Find("Platform (2)").GetComponent <Platform>(),GameObject.Find ("Train (2)").GetComponent <Train>(),"Bristol"));
+			timetable.Add (new TimetableItem(0f,GameObject.Find("Platform (3)").GetComponent <Platform>(),GameObject.Find ("Train (3)").GetComponent <Train>(),"Bristol"));
+			timetable.Add (new TimetableItem(0f,GameObject.Find("Platform (4)").GetComponent <Platform>(),GameObject.Find ("Train (4)").GetComponent <Train>(),"Bristol"));
 			timetable.Add (new TimetableItem(0f,GameObject.Find("PlatformTest").GetComponent <Platform>(),GameObject.Find ("Complex Train (1)").GetComponent <Train>(),"Bristol"));
 		
 		}
