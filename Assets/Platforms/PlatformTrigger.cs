@@ -4,13 +4,25 @@ using UnityEngine;
 
 public class PlatformTrigger : MonoBehaviour {
 
-	// Use this for initialization
-	void Start () {
-		
+	private Platform myPlatform;
+
+	void Start() {
+		myPlatform = GetComponentInParent <Platform> ();
 	}
-	
-	// Update is called once per frame
-	void Update () {
-		
+
+	void OnTriggerEnter (Collider coll) {
+		Person person = coll.gameObject.GetComponent <Person> ();
+		if (person) {
+			Vector3 freeWaitLocation = myPlatform.RegisterPerson (person);
+			person.OnPlatformEnter (myPlatform, freeWaitLocation);
+		}
+	}
+
+	void OnTriggerExit (Collider coll) {
+		Person person = coll.gameObject.GetComponent <Person> ();
+		if (person) {
+			myPlatform.UnregisterPerson (person);
+			person.OnPlatformExit ();
+		}
 	}
 }

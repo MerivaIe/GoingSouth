@@ -13,11 +13,10 @@ public class Platform : MonoBehaviour {
 	public Train incomingTrain { get; private set; }
 
 	private List<WaitLocation> waitLocations = new List<WaitLocation> ();
-	private Bounds platformTriggerBounds, platformSignalBounds;
+	private Bounds platformTriggerBounds;
 
 	void Start () {
 		platformTriggerBounds = GetComponentInChildren<PlatformTrigger>().gameObject.GetComponent <BoxCollider>().bounds;
-		platformSignalBounds = GetComponentInChildren<Signal> ().gameObject.GetComponent <BoxCollider> ().bounds;
 		nextDeparture = "Bristol"; //hard coding
 		incomingTrain = GameManager.GetNextTrain (this);
 
@@ -39,8 +38,7 @@ public class Platform : MonoBehaviour {
 
 	public Vector3 RegisterPerson(Person person) {
 		List<WaitLocation> freeWaitLocations = waitLocations.Where (a => a.person == null).ToList ();
-		if (freeWaitLocations.Count == 0) {
-			Debug.Log("Consumed all wait locations at platform. Generating new set.");
+		if (freeWaitLocations.Count == 0) {	//no more wait locations, calculate some more
 			CalculateNewWaitLocations ();
 			freeWaitLocations = waitLocations;
 		}

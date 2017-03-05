@@ -11,12 +11,12 @@ public class Train : MonoBehaviour {
 	public Vector3 direction;	//this should eventually be replaced with just transform.forward everywhere
 	public Color color;
 	public SphereCollider[] doors {get; private set;}	//has to be collider so that transform is queried once train reaches platform
-	public BoxCollider boardingTrigger { get; private set; }
 	public float length { get; private set; }
 
 	private Rigidbody rb;
 	private float totalDistance, startPosX, startSpeedX;
 	private Animator animator;
+	private List<Person> peopleOnBoard = new List<Person> ();
 
 	void Start () {
 		rb = GetComponent <Rigidbody> ();
@@ -29,12 +29,6 @@ public class Train : MonoBehaviour {
 		//}
 
 		doors = GetComponentsInChildren <SphereCollider>().ToArray ();
-
-		foreach (BoxCollider coll in GetComponentsInChildren <BoxCollider>()) {	//linq this
-			if (coll.gameObject.CompareTag ("BoardingTrigger")) {
-				boardingTrigger = coll;
-			}
-		}
 	}
 
 	void FixedUpdate () {
@@ -80,6 +74,7 @@ public class Train : MonoBehaviour {
 		status = TrainStatus.Braking;
 	}
 
+	#region Braking Sequence
 	void OpenDoors ()
 	{
 		animator.SetTrigger ("doorOpen");
@@ -105,20 +100,31 @@ public class Train : MonoBehaviour {
 
 	void Depart() {
 		animator.ResetTrigger ("doorClose");
-		foreach (SphereCollider door in doors) {
-			door.enabled = false;
+		foreach (SphereCollider doorTrigger in doors) {
+			doorTrigger.enabled = false;
 		}
 		HandlePeopleOnboard ();
 		startSpeedX = direction.x * 0.1f;
 		totalDistance = length * accelerationModifier;
 		status = TrainStatus.Accelerating;
 	}
+	#endregion
 
 	void HandlePeopleOnboard() {
-		int layerMask = 1 << LayerMask.NameToLayer ("People");
-		Person[] peopleInTrain = Physics.OverlapBox (boardingTrigger.bounds.center, boardingTrigger.bounds.extents, Quaternion.identity, layerMask).Select (a => a.gameObject.GetComponent <Person> ()).ToArray ();
-		foreach (Person person in peopleInTrain) {
+		foreach (Person person in peopleOnBoard) {
 			person.OnTrainLeaveStation ();
+		}
+	}
+
+	public void RegisterPerson(Person person) {
+		peopleOnBoard.Add (person);
+	}
+
+	public void UnregisterPerson(Person person) {
+		try {
+			peopleOnBoard.Remove (person);
+		} catch {
+			Debug.LogError ("Could not find expected person in list of onboard people.");
 		}
 	}
 }

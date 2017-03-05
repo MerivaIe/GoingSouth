@@ -9,15 +9,16 @@ using System.Linq;
 public class Person : MonoBehaviour {
 
 	public bool testMode = false;
+	public bool insideTrain {get; private set;}
 	/// <summary>
 	/// PersonStatus: MovingToPlatform=nmAgent control to centre of platform | WrongPlatform=nmAgent control to waiting area | MovingToDoor=nmAgent control to one door location | Boarding=physics control avoidance of others
 	/// </summary>
-	public enum PersonStatus{MovingToPlatform,MovingToFoyer,ReadyToBoard,MovingToTrainDoor,BoardingTrain,FindingSeat,SatDown,BoardingFailed,Alighted,Compromised}
+	public enum PersonStatus{MovingToPlatform,MovingToFoyer,ReadyToBoard,MovingToTrainDoor,BoardingTrain,FindingSeat,SatDown,Alighted,Compromised}
 	public PersonStatus status; 
 	public string destination{ get; private set; }
 	public TimetableItem timetableItem;	//this will replace the destination field above
 	public Platform currentPlatform;
-	public float sqrMagDeathVelocity = 1f, boardingForce = 20f, nudgeForce = 1f, dragBase = 20f, checkingInterval = 0.5f,proximityDistance = 0.5f, centreOfMassYOffset = 0f;
+	public float boardingForce = 20f, nudgeForce = 1f, dragBase = 20f, checkingInterval = 0.5f,proximityDistance = 0.5f, centreOfMassYOffset = 0f;
 	public static float sqrTargetThreshold = 4f;
 	public float tempDrag = 7.5f;
 
@@ -38,6 +39,7 @@ public class Person : MonoBehaviour {
 		nmAgent.speed = Random.Range(2f,5f);
 		rb.centerOfMass = new Vector3(0f,centreOfMassYOffset,0f);
 		toPlatformTarget.y = 0f;	//we will only ever modify the xz
+		insideTrain = false;
 		if (testMode) {
 			try {
 				nmAgent.SetDestination(currentPlatform.transform.position);
@@ -101,6 +103,7 @@ public class Person : MonoBehaviour {
 		case Train.TrainStatus.Braking:	//Need to also make it so that people fall off platform
 			if (status == PersonStatus.MovingToTrainDoor || status == PersonStatus.BoardingTrain) {	//pick up anyone who failed to board train
 				status = PersonStatus.ReadyToBoard;
+				rb.drag = 0f;
 			}
 			if (status == PersonStatus.ReadyToBoard) {
 //				if (Time.time > nextCheckTime) {
@@ -119,59 +122,15 @@ public class Person : MonoBehaviour {
 
 				toPlatformTarget.x = platformTarget.x - transform.position.x;
 				toPlatformTarget.z = platformTarget.z - transform.position.z;
-				rb.drag = tempDrag;
 				atPlatformTarget = toPlatformTarget.sqrMagnitude < 0.01f;	//<0.1^2
-				if (atPlatformTarget && nmAgent.enabled) {	//if under agent control and close to target: turn off agent
+				if (atPlatformTarget && nmAgent.enabled) {			//if under agent control and close to target: turn off agent
 					SetAgentControl (false);
+					rb.drag = tempDrag;
 				} else if (!atPlatformTarget && !nmAgent.enabled) {	//else under physics control and not close: nudge towards target
 					rb.AddForce (toPlatformTarget.normalized * nudgeForce, ForceMode.Acceleration);
 				}
 			}
 			break;
-		}
-	}
-
-	void OnTriggerEnter(Collider coll) {
-		if (status != PersonStatus.Compromised && status != PersonStatus.SatDown) {
-
-			if (coll.gameObject.GetComponent<PlatformTrigger> ()) {
-				if (status == PersonStatus.MovingToPlatform) {
-					currentPlatform = coll.gameObject.GetComponentInParent<Platform> ();
-					if (destination == currentPlatform.nextDeparture) {
-						RegisterWithPlatform ();
-						nmAgent.SetDestination (platformTarget);
-						status = PersonStatus.ReadyToBoard;
-					} else {
-						status = PersonStatus.MovingToFoyer;	//currently unhandled
-					}
-				}
-			} else if (coll.GetType () == typeof(SphereCollider)) {	//person is being pushed back out of train so make them apply boarding force again TODO: non-critical: this doesnt work if nearly all people board from one side
-				if (status == PersonStatus.FindingSeat) {
-					Vector3 offset = transform.position - coll.bounds.center;
-					if (IsDirectionClear (-offset)) {	//if it is clear behind the person then push
-						trainTarget = transform.position + offset;
-						status = PersonStatus.BoardingTrain;
-					}
-				} else if (status == PersonStatus.MovingToTrainDoor) {
-					trainTarget.z += 2f * currentPlatform.incomingTrain.transform.localScale.z;	//perhaps train width if we ever go wider trains
-					status = PersonStatus.BoardingTrain;
-				}
-			} else if (coll.CompareTag ("KillingTrigger") && coll.gameObject.GetComponentInParent <Rigidbody> ().velocity.sqrMagnitude > sqrMagDeathVelocity) {
-				status = PersonStatus.Compromised;
-				DeathKnell ();
-			}
-		}
-	}
-
-	void OnTriggerExit(Collider coll) {
-		if (status == PersonStatus.BoardingTrain && coll.GetType () == typeof(SphereCollider) && currentPlatform && currentPlatform.incomingTrain.boardingTrigger.bounds.Contains (transform.position)) {
-			rb.drag = 0f;
-			if (Random.value > 0.67f) {	//3rd chance of making a light person (for crowdsurfing)
-				rb.mass = 10f;
-				rb.ResetCenterOfMass ();
-			}
-			rb.constraints = RigidbodyConstraints.None;
-			status = PersonStatus.FindingSeat;
 		}
 	}
 
@@ -189,9 +148,11 @@ public class Person : MonoBehaviour {
 	}
 
 	void MoveUsingForce(Vector3 boardingVector) {
-		float angleDiff = Mathf.Deg2Rad * Vector3.Angle (rb.velocity, boardingVector);	// provide a bit of drag to prevent oscillation around boarding vector
-		float dragModifier = Mathf.Sin (0.5f * angleDiff);
-		rb.drag = dragModifier * dragBase;					//do this only when outside the train
+		if (!insideTrain) {
+			float angleDiff = Mathf.Deg2Rad * Vector3.Angle (rb.velocity, boardingVector);	// provide a bit of drag to prevent oscillation around boarding vector
+			float dragModifier = Mathf.Sin (0.5f * angleDiff);
+			rb.drag = dragModifier * dragBase;
+		}
 		rb.AddForce (boardingForce * boardingVector.normalized, ForceMode.Acceleration);	//TODO: use the below but apply at transform.position at start of push and at transform.position + rb.centerOfMass at the end of the pushing... this will mean people are not flopping over at the start of pushing
 		//rb.AddForceAtPosition (boardingForce*boardingVector.normalized,transform.position,ForceMode.Acceleration);
 	}
@@ -221,44 +182,92 @@ public class Person : MonoBehaviour {
 		trainTarget = doorLocations[closestTargetIndex];
 	}
 
-	void DeathKnell() {
-		SetAgentControl (false);	//turn their kinematic and nmagent off ready for beautiful physics interactions
-		rb.ResetCenterOfMass ();
-		rb.drag = 0f;
-		rb.constraints = RigidbodyConstraints.None;
-		//TODO do we need to unregister from platform
+	public void OnHitTrain() {
+		if (status != PersonStatus.Compromised) {
+			status = PersonStatus.Compromised;
+			SetAgentControl (false);
+			rb.ResetCenterOfMass ();
+			rb.drag = 0f;
+			rb.constraints = RigidbodyConstraints.None;
+		}
 	}
 
-	void RegisterWithPlatform ()
-	{
-		platformTarget = currentPlatform.RegisterPerson (this);
+	public void OnDoorEnter(Vector3 doorCentre) {
+		if (status == PersonStatus.FindingSeat) {	//person is being pushed back out of train so make them apply boarding force again TODO: non-critical: this doesnt work if nearly all people board from one side
+			Vector3 offset = transform.position - doorCentre;
+			if (IsDirectionClear (-offset)) {	//if it is clear behind the person then push
+				trainTarget = transform.position + offset;
+				status = PersonStatus.BoardingTrain;
+			}
+		} else if (status == PersonStatus.MovingToTrainDoor) {
+			trainTarget.z += 2f * currentPlatform.incomingTrain.transform.localScale.z;	//perhaps train width if we ever go wider trains
+			status = PersonStatus.BoardingTrain;
+		}
 	}
 
-	void UnregisterWithPlatform() {
-		currentPlatform.UnregisterPerson (this);	//////////do this whenever someone leaves platform and free up their location
-		status = PersonStatus.MovingToFoyer;
+	public void OnDoorExitIntoTrain() {
+		if (status == PersonStatus.BoardingTrain) {
+			if (Random.value > 0.67f) {	//33% chance of making a light person (for crowdsurfing)
+				rb.mass = 10f;
+				rb.ResetCenterOfMass ();
+			}
+			status = PersonStatus.FindingSeat;
+		}
 	}
 
 	public void OnTrainLeaveStation() {
 		Component.Destroy (rb);
 		transform.parent = currentPlatform.incomingTrain.transform;
 		status = PersonStatus.SatDown;
-		//TODO unregister from platform!!!!!!
 	}
 
 	public void SetMovingToPlatform(Vector3 optionalPlatformTarget) {
 		SetAgentControl (true);	//may jerk them up... change this to after a recovery period once they have stood up?
-		nmAgent.SetDestination (optionalPlatformTarget);
+		platformTarget = optionalPlatformTarget;
+		nmAgent.SetDestination (platformTarget);
 		status = PersonStatus.MovingToPlatform;	
 	}
 	public void SetMovingToPlatform() {
-		if (platformTarget == null) {
+		if (platformTarget == Vector3.zero) {	//TODO: this might on very rare occasions cause an error if there is a platform situated at 0,0,0
 			Debug.LogWarning ("No platform target provided by caller and we do not have one already stored. Please specify platform target using overloaded method.");
 			//TODO maybe return to foyer/default
 		} else {
 			SetAgentControl (true);	//may jerk them up... change this to after a recovery period once they have stood up?
 			nmAgent.SetDestination (platformTarget);
-			status = PersonStatus.MovingToPlatform;	//what if they hit it from foyer
+			status = PersonStatus.MovingToPlatform;
 		}
+	}
+
+	public void OnHitGround() {
+		if (status != PersonStatus.Compromised) {	//TODO what if they hit ground from foyer rather than platform
+			Invoke("SetMovingToPlatform",2f);	//TODO: invoke after they have stood up
+		}
+	}
+
+	public void OnPlatformEnter(Platform platform, Vector3 waitLocation) {
+		if (status == PersonStatus.MovingToPlatform) {	//this will exclude compromised people
+			currentPlatform = platform;
+			if (destination == currentPlatform.nextDeparture) {
+				platformTarget = waitLocation;
+				nmAgent.SetDestination (platformTarget);
+				rb.constraints = RigidbodyConstraints.FreezePositionY;
+				status = PersonStatus.ReadyToBoard;
+			} else {
+				status = PersonStatus.MovingToFoyer;	//currently unhandled
+			}
+		}
+	}
+
+	public void OnPlatformExit() {	//TODO: do we need to nullify currentPlatform?
+		rb.drag = 0f;
+		rb.constraints = RigidbodyConstraints.None;
+	}
+
+	public void OnTrainEnter() {
+		insideTrain = true;
+	}
+
+	public void OnTrainExit() {
+		insideTrain = false;
 	}
 }
