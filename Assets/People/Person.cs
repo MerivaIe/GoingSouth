@@ -148,11 +148,11 @@ public class Person : MonoBehaviour {
 	}
 
 	void MoveUsingForce(Vector3 boardingVector) {
-		if (!insideTrain) {
-			float angleDiff = Mathf.Deg2Rad * Vector3.Angle (rb.velocity, boardingVector);	// provide a bit of drag to prevent oscillation around boarding vector
-			float dragModifier = Mathf.Sin (0.5f * angleDiff);
-			rb.drag = dragModifier * dragBase;
-		}
+//		if (!insideTrain) {
+//			float angleDiff = Mathf.Deg2Rad * Vector3.Angle (rb.velocity, boardingVector);	// provide a bit of drag to prevent oscillation around boarding vector
+//			float dragModifier = Mathf.Sin (0.5f * angleDiff);
+//			rb.drag = dragModifier * dragBase;
+//		}
 		rb.AddForce (boardingForce * boardingVector.normalized, ForceMode.Acceleration);	//TODO: use the below but apply at transform.position at start of push and at transform.position + rb.centerOfMass at the end of the pushing... this will mean people are not flopping over at the start of pushing
 		//rb.AddForceAtPosition (boardingForce*boardingVector.normalized,transform.position,ForceMode.Acceleration);
 	}
