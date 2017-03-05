@@ -22,10 +22,10 @@ public class PersonSpawner : MonoBehaviour {
 	void Update () {
 		foreach (Spawnpoint spawnPoint in spawnPoints) {
 			if (IsTimeToSpawn ()) {
-				GameObject person = Instantiate (personPrefab, spawnPoint.transform.position, Quaternion.identity) as GameObject;
-				person.transform.parent = organisingParent.transform;
+				GameObject personGO = Instantiate (personPrefab, spawnPoint.transform.position, Quaternion.identity) as GameObject;
+				personGO.transform.parent = organisingParent.transform;
 				Vector3 platformPos = platforms[Random.Range (0, platforms.Length)].transform.position;	//set platform destination randomly from publically exposed platforms
-				person.GetComponent <Person>().SetMovingToPlatform (platformPos);
+				personGO.GetComponent <Person>().SetMovingToPlatform (platformPos);
 			}
 		}
 	}

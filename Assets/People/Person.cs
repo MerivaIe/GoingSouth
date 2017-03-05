@@ -18,9 +18,8 @@ public class Person : MonoBehaviour {
 	public string destination{ get; private set; }
 	public TimetableItem timetableItem;	//this will replace the destination field above
 	public Platform currentPlatform;
-	public float boardingForce = 20f, nudgeForce = 1f, dragBase = 20f, checkingInterval = 0.5f,proximityDistance = 0.5f, centreOfMassYOffset = 0f;
+	public float boardingForce = 20f, nudgeForce = 1f, checkingInterval = 0.5f,proximityDistance = 0.5f, centreOfMassYOffset = 0f;
 	public static float sqrTargetThreshold = 4f;
-	public float tempDrag = 7.5f;
 
 	private NavMeshAgent nmAgent;
 	private NavMeshObstacle nmObstacle;
@@ -31,7 +30,7 @@ public class Person : MonoBehaviour {
 	private float nextCheckTime = 0f;
 	private bool boardUsingForce = false, atPlatformTarget = false;
 
-	void Start () {
+	void Awake () {
 		rb = GetComponent <Rigidbody> ();
 		nmAgent = GetComponent <NavMeshAgent>();
 		nmObstacle = GetComponent <NavMeshObstacle> ();
@@ -92,7 +91,6 @@ public class Person : MonoBehaviour {
 			if (status == PersonStatus.BoardingTrain || boardUsingForce) {
 				MoveUsingForce (boardingVector);
 			} else {
-				rb.drag = 0f;
 				rb.velocity = nmAgent.speed * boardingVector.normalized;
 			}
 			break;
@@ -103,13 +101,11 @@ public class Person : MonoBehaviour {
 		case Train.TrainStatus.Braking:	//Need to also make it so that people fall off platform
 			if (status == PersonStatus.MovingToTrainDoor || status == PersonStatus.BoardingTrain) {	//pick up anyone who failed to board train
 				status = PersonStatus.ReadyToBoard;
-				rb.drag = 0f;
 			}
 			if (status == PersonStatus.ReadyToBoard) {
 //				if (Time.time > nextCheckTime) {
 //					toPlatformTarget = platformTarget - transform.position;
 //					toPlatformTarget.y = 0f;
-//					//may need to turn on drag
 //					atPlatformTarget = toPlatformTarget.sqrMagnitude < 0.01f;	//<0.1^2
 //					nextCheckTime = Time.time + checkingInterval;
 //					if (atPlatformTarget && nmAgent.enabled) {	//if under agent control and close to target: turn off agent
@@ -125,9 +121,8 @@ public class Person : MonoBehaviour {
 				atPlatformTarget = toPlatformTarget.sqrMagnitude < 0.01f;	//<0.1^2
 				if (atPlatformTarget && nmAgent.enabled) {			//if under agent control and close to target: turn off agent
 					SetAgentControl (false);
-					rb.drag = tempDrag;
 				} else if (!atPlatformTarget && !nmAgent.enabled) {	//else under physics control and not close: nudge towards target
-					rb.AddForce (toPlatformTarget.normalized * nudgeForce, ForceMode.Acceleration);
+					rb.AddForce (toPlatformTarget.normalized * nudgeForce, ForceMode.Acceleration);	//TODO could improve performance further by setting direction just once? (normalized is heavy)
 				}
 			}
 			break;
@@ -148,11 +143,6 @@ public class Person : MonoBehaviour {
 	}
 
 	void MoveUsingForce(Vector3 boardingVector) {
-//		if (!insideTrain) {
-//			float angleDiff = Mathf.Deg2Rad * Vector3.Angle (rb.velocity, boardingVector);	// provide a bit of drag to prevent oscillation around boarding vector
-//			float dragModifier = Mathf.Sin (0.5f * angleDiff);
-//			rb.drag = dragModifier * dragBase;
-//		}
 		rb.AddForce (boardingForce * boardingVector.normalized, ForceMode.Acceleration);	//TODO: use the below but apply at transform.position at start of push and at transform.position + rb.centerOfMass at the end of the pushing... this will mean people are not flopping over at the start of pushing
 		//rb.AddForceAtPosition (boardingForce*boardingVector.normalized,transform.position,ForceMode.Acceleration);
 	}
@@ -187,7 +177,6 @@ public class Person : MonoBehaviour {
 			status = PersonStatus.Compromised;
 			SetAgentControl (false);
 			rb.ResetCenterOfMass ();
-			rb.drag = 0f;
 			rb.constraints = RigidbodyConstraints.None;
 		}
 	}
@@ -259,7 +248,6 @@ public class Person : MonoBehaviour {
 	}
 
 	public void OnPlatformExit() {	//TODO: do we need to nullify currentPlatform?
-		rb.drag = 0f;
 		rb.constraints = RigidbodyConstraints.None;
 	}
 
