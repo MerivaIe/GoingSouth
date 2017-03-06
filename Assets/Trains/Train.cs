@@ -23,10 +23,6 @@ public class Train : MonoBehaviour {
 		length = 20f; 				//TODO hard coded
 		animator = GetComponent <Animator>();
 		status = TrainStatus.Idle;
-		//select color that be decided by GameManager for that destination
-		//Color RandomColor() {
-		//	return new Color(Random.value, Random.value, Random.value);
-		//}
 
 		doors = GetComponentsInChildren <SphereCollider>().ToArray ();
 	}
@@ -125,6 +121,15 @@ public class Train : MonoBehaviour {
 			peopleOnBoard.Remove (person);
 		} catch {
 			Debug.LogError ("Could not find expected person in list of onboard people.");
+		}
+	}
+
+	public void SetTrainColor(Color _color) {
+		color = _color;
+		foreach (MeshRenderer meshRenderer in GetComponentsInChildren <MeshRenderer>()) {	//set all external faces of train to this color
+			if (meshRenderer.material.name == "TrainExternal") {
+				meshRenderer.material.color = color;
+			}
 		}
 	}
 }

@@ -15,8 +15,7 @@ public class Person : MonoBehaviour {
 	/// </summary>
 	public enum PersonStatus{MovingToPlatform,MovingToFoyer,ReadyToBoard,MovingToTrainDoor,BoardingTrain,FindingSeat,SatDown,Alighted,Compromised}
 	public PersonStatus status; 
-	public string destination{ get; private set; }
-	public TimetableItem timetableItem;	//this will replace the destination field above
+	public Destination destination{ get; private set; }
 	public Platform currentPlatform;
 	public float boardingForce = 20f, nudgeForce = 1f, checkingInterval = 0.5f,proximityDistance = 0.5f, centreOfMassYOffset = 0f;
 	public static float sqrTargetThreshold = 4f;
@@ -34,7 +33,6 @@ public class Person : MonoBehaviour {
 		rb = GetComponent <Rigidbody> ();
 		nmAgent = GetComponent <NavMeshAgent>();
 		nmObstacle = GetComponent <NavMeshObstacle> ();
-		destination = "Bristol";	//TODO hard coded
 		nmAgent.speed = Random.Range(2f,5f);
 		rb.centerOfMass = new Vector3(0f,centreOfMassYOffset,0f);
 		toPlatformTarget.y = 0f;	//we will only ever modify the xz
@@ -236,14 +234,14 @@ public class Person : MonoBehaviour {
 	public void OnPlatformEnter(Platform platform, Vector3 waitLocation) {
 		if (status == PersonStatus.MovingToPlatform) {	//this will exclude compromised people
 			currentPlatform = platform;
-			if (destination == currentPlatform.nextDeparture) {
+			//if (destination == currentPlatform.nextDeparture) {
 				platformTarget = waitLocation;
 				nmAgent.SetDestination (platformTarget);
-				rb.constraints = RigidbodyConstraints.FreezePositionY;
+			rb.constraints = RigidbodyConstraints.FreezePositionY;	//TODO: believe this is what is causing some people to penetrate the platform slightly (they must be reentering at wrong height)
 				status = PersonStatus.ReadyToBoard;
-			} else {
-				status = PersonStatus.MovingToFoyer;	//currently unhandled
-			}
+			//} else {
+			//	status = PersonStatus.MovingToFoyer;	//currently unhandled
+			//}
 		}
 	}
 

@@ -8,11 +8,12 @@ public class TimetableItem {
 	public float scheduledArrivalTime;
 	public Platform platform;
 	public Train train;
-	public string destination;
-	public TimetableItem(float _schedArrivalTime, Platform _platform, Train _train, string _destination) {
+	public Destination destination;
+
+	public TimetableItem(Destination _destination, float _schedArrivalTime, Platform _platform, Train _train) {
+		destination = _destination;
 		scheduledArrivalTime = _schedArrivalTime;
 		platform = _platform;
 		train = _train;
-		destination = _destination;
 	}
 }

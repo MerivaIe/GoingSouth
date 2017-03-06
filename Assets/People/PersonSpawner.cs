@@ -8,7 +8,6 @@ public class PersonSpawner : MonoBehaviour {
 	[Tooltip ("Time between people spawns (0.2 for 5 per second)")]
 	public float meanSpawnDelay = 1f;
 	public GameObject personPrefab;
-	public GameObject[] platforms;	//TODO: in future this should be a list in game manager and should be found using ObjectsOfType on Start
 
 	private Spawnpoint[] spawnPoints;
 	private GameObject organisingParent;
@@ -24,7 +23,7 @@ public class PersonSpawner : MonoBehaviour {
 			if (IsTimeToSpawn ()) {
 				GameObject personGO = Instantiate (personPrefab, spawnPoint.transform.position, Quaternion.identity) as GameObject;
 				personGO.transform.parent = organisingParent.transform;
-				Vector3 platformPos = platforms[Random.Range (0, platforms.Length)].transform.position;	//set platform destination randomly from publically exposed platforms
+				Vector3 platformPos = GameManager.platforms[Random.Range (0, GameManager.platforms.Length)].transform.position;	//set platform destination randomly from publically exposed platforms
 				personGO.GetComponent <Person>().SetMovingToPlatform (platformPos);
 			}
 		}

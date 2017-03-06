@@ -9,7 +9,6 @@ public class Platform : MonoBehaviour {
 	[Tooltip("MUST SET THIS MANUALLY AS NAVMESH API IS LACKING")]
 	public float nmAgentRadius = 0.5f;
 	public float waitSpacing = 1f;
-	public string nextDeparture { get; private set; }
 	public Train incomingTrain { get; private set; }
 
 	private List<WaitLocation> waitLocations = new List<WaitLocation> ();
@@ -17,7 +16,6 @@ public class Platform : MonoBehaviour {
 
 	void Start () {
 		platformTriggerBounds = GetComponentInChildren<PlatformTrigger>().gameObject.GetComponent <BoxCollider>().bounds;
-		nextDeparture = "Bristol"; //hard coding
 		incomingTrain = GameManager.GetNextTrain (this);
 
 		CalculateNewWaitLocations ();
