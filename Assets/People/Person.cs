@@ -63,6 +63,7 @@ public class Person : MonoBehaviour {
 	//might be better to actually do all of this on a switch(on status) at the base level actually- it is getting hard to read
 	void FixedUpdate() {
 		if (status == PersonStatus.MovingToPlatform || status == PersonStatus.Compromised || status == PersonStatus.SatDown) {return;}	//could this be made quicker using bitwise operations on enum flags?
+		if (!currentPlatform.incomingTrain) {return;}
 
 		switch (currentPlatform.incomingTrain.status) {
 		case Train.TrainStatus.BoardingTime:

@@ -10,10 +10,19 @@ public class TimetableItem {
 	public Train train;
 	public Destination destination;
 
-	public TimetableItem(Destination _destination, float _schedArrivalTime, Platform _platform, Train _train) {
+	public TimetableItem(Destination _destination, float _schedArrivalTime) {
 		destination = _destination;
 		scheduledArrivalTime = _schedArrivalTime;
-		platform = _platform;
+	}
+
+	public void SetTrain(Train _train) {
 		train = _train;
+		//let train know that this item is assigned to it
+		train.myTimetableItem = this;
+	}
+
+	public void SetPlatform (Platform _platform) {
+		platform = _platform;
+		//TODO: let platform know this item is assigned to it???????????
 	}
 }

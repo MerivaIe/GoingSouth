@@ -6,31 +6,30 @@ using UnityEngine;
 /// Stores info against each destination
 /// </summary>
 public class Destination {
-	public string name;
-	float avgTimeBetweenTrains;	//player decided
-	float routeLength;
-	int noTrainsAssigned;		//player decided
-	int estimatedDailyFootfall;
 	public Color color{ get; private set; }
-	static List<Color> availableColors;
+	public string name{ get; private set; }
+	public float routeLength { get; private set; }
+
+	int estimatedDailyFootfall;
+	static List<Color> availableColors = new List<Color>();
 
 	public Destination(string _name, float _routeLength, int _estimatedDailyFootfall) {
 		name = _name;
 		routeLength = _routeLength;	//in km
 		estimatedDailyFootfall = _estimatedDailyFootfall;
 
-		int nocolorsAvailable = availableColors.Count;
+		int noColorsAvailable = availableColors.Count;
 
-		if (nocolorsAvailable == 0) {	//this will be called on the first instantiation to set up the static list, and will be called if we run out of colors (undesirable as we are just reusing old ones then)
+		if (noColorsAvailable == 0) {	//this will be called on the first instantiation to set up the static list, and will be called if we run out of colors (undesirable as we are just reusing old ones then)
 			availableColors = GameManager.defaultColors;
-			nocolorsAvailable = availableColors.Count;
+			noColorsAvailable = availableColors.Count;
 		}
 
-		if (nocolorsAvailable == 1) {
+		if (noColorsAvailable == 1) {
 			Debug.LogWarning ("About to use the last available color for Destinations. Will start using old colors for any further destinations.");
 		}
 
-		int randIndex = Random.Range (0, nocolorsAvailable);
+		int randIndex = Random.Range (0, noColorsAvailable);
 		color = availableColors [randIndex];
 		availableColors.RemoveAt (randIndex);
 	}

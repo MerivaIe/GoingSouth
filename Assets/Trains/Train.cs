@@ -12,9 +12,10 @@ public class Train : MonoBehaviour {
 	public Color color;
 	public SphereCollider[] doors {get; private set;}	//has to be collider so that transform is queried once train reaches platform
 	public float length { get; private set; }
+	public TimetableItem myTimetableItem;
 
 	private Rigidbody rb;
-	private float totalDistance, startPosX, startSpeedX;
+	private float speedChangeDistance, startPosX, startSpeedX, journeyStartTime = 0f, journeyProgress; //I envisage journeyProgress being calculated on demand
 	private Animator animator;
 	private List<Person> peopleOnBoard = new List<Person> ();
 
@@ -43,7 +44,7 @@ public class Train : MonoBehaviour {
 				status = TrainStatus.LeavingStation;
 			} else {
 				newVelocity.x = SmoothlyAccelerateToTargetSpeed (speed);
-				//potentially Mathf.SmoothDamp( should be used for this
+				//potentially Mathf.SmoothDamp( should be used for this... or SmoothStep
 			}
 			break;
 		case TrainStatus.Idle:
@@ -59,15 +60,22 @@ public class Train : MonoBehaviour {
 
 	float SmoothlyAccelerateToTargetSpeed (float targetSpeed)	//this is not actually linear because interval is dependent on distance
 	{
-		return Mathf.Lerp (startSpeedX, targetSpeed, direction.x * (transform.position.x - startPosX) / totalDistance);
+		return Mathf.Lerp (startSpeedX, targetSpeed, direction.x * (transform.position.x - startPosX) / speedChangeDistance);
 	}
 
-	public void SetBraking (float stoppingPosX)
+	public void SetBraking (float stoppingPosX)	//if you are going to have global parameters for this then make the targetSpeed in SmoothlyAccelerate global as well....and combine this with the method below
 	{
 		startSpeedX = rb.velocity.x;
 		startPosX = transform.position.x;
-		totalDistance =  stoppingPosX - startPosX;	//end of signal trigger - position of front of train
+		speedChangeDistance =  stoppingPosX - startPosX;	//end of signal trigger - position of front of train
 		status = TrainStatus.Braking;
+	}
+
+	void SetAccelerating() {
+		startSpeedX = direction.x * 0.1f;
+		startPosX = transform.position.x;
+		speedChangeDistance = length * accelerationModifier;
+		status = TrainStatus.Accelerating;
 	}
 
 	#region Braking Sequence
@@ -100,9 +108,8 @@ public class Train : MonoBehaviour {
 			doorTrigger.enabled = false;
 		}
 		HandlePeopleOnboard ();
-		startSpeedX = direction.x * 0.1f;
-		totalDistance = length * accelerationModifier;
-		status = TrainStatus.Accelerating;
+		SetAccelerating ();
+		journeyStartTime = Time.time;
 	}
 	#endregion
 
@@ -129,6 +136,21 @@ public class Train : MonoBehaviour {
 		foreach (MeshRenderer meshRenderer in GetComponentsInChildren <MeshRenderer>()) {	//set all external faces of train to this color
 			if (meshRenderer.material.name == "TrainExternal") {
 				meshRenderer.material.color = color;
+			}
+		}
+	}
+
+	public float GetJourneyProgress() {
+		if (journeyStartTime == 0f) {
+			return 0f;
+		} else {
+			float journeyTimeInGame = GameManager.minutesPerSecond * (Time.time - journeyStartTime);
+			float distanceTravelled = journeyTimeInGame * speed * 60f;	//minutes duration * (metres per second * seconds per minute)
+			float journeyProgress = distanceTravelled / myTimetableItem.destination.routeLength;
+			if (journeyProgress <= 1) {
+				return journeyProgress;			//outbound
+			} else {
+				return 2f - journeyProgress;	//inbound
 			}
 		}
 	}
