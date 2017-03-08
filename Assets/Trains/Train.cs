@@ -12,12 +12,13 @@ public class Train : MonoBehaviour {
 	public Color color;
 	public SphereCollider[] doors {get; private set;}	//has to be collider so that transform is queried once train reaches platform
 	public float length { get; private set; }
-	public TimetableItem myTimetableItem;
 
 	private Rigidbody rb;
-	private float speedChangeDistance, startPosX, startSpeedX, journeyStartTime = 0f, journeyProgress; //I envisage journeyProgress being calculated on demand
+	private float speedChangeDistance, startPosX, startSpeedX; 
 	private Animator animator;
 	private List<Person> peopleOnBoard = new List<Person> ();
+	private float journeyStartTime = 0f, journeyEndTime = 0f;	//journeyProgress being calculated on demand, journeyEndTime will tell things when train is available to be assigned again
+	private TimetableItem myCurrentTimetableItem;
 
 	void Start () {
 		rb = GetComponent <Rigidbody> ();
@@ -109,7 +110,7 @@ public class Train : MonoBehaviour {
 		}
 		HandlePeopleOnboard ();
 		SetAccelerating ();
-		journeyStartTime = Time.time;
+		CalculateJourneyMetrics ();
 	}
 	#endregion
 
@@ -117,6 +118,14 @@ public class Train : MonoBehaviour {
 		foreach (Person person in peopleOnBoard) {
 			person.OnTrainLeaveStation ();
 		}
+	}
+
+	void CalculateJourneyMetrics ()	//TODO: if we end up calling to our timetable item a lot then maybe store a reference to it
+	{
+		journeyStartTime = Time.time;
+		float journeyDurationInGameMinutes = (myCurrentTimetableItem.destination.routeLength * 1000f) / (speed * 60f);	//distance in metres / speed in metres per min
+		float journeyDurationInRealSeconds = journeyDurationInGameMinutes / GameManager.minutesPerSecond;
+		journeyEndTime = journeyStartTime + journeyDurationInRealSeconds;
 	}
 
 	public void RegisterPerson(Person person) {
@@ -139,19 +148,16 @@ public class Train : MonoBehaviour {
 			}
 		}
 	}
+	public void SetCurrentTimetableItem(TimetableItem timetableItem) {
+		myCurrentTimetableItem = timetableItem;
+	}
 
-	public float GetJourneyProgress() {
+	public float GetJourneyProgress() {	//return 0-1 for slider value
 		if (journeyStartTime == 0f) {
 			return 0f;
 		} else {
-			float journeyTimeInGame = GameManager.minutesPerSecond * (Time.time - journeyStartTime);
-			float distanceTravelled = journeyTimeInGame * speed * 60f;	//minutes duration * (metres per second * seconds per minute)
-			float journeyProgress = distanceTravelled / myTimetableItem.destination.routeLength;
-			if (journeyProgress <= 1) {
-				return journeyProgress;			//outbound
-			} else {
-				return 2f - journeyProgress;	//inbound
-			}
+			float journeyProgress = (Time.time - journeyStartTime) / (journeyEndTime - journeyStartTime);	//note that this is both outbound and inbound
+			return (1f-Mathf.Abs (2f*journeyProgress - 1));	//this handles outbound progress and inbound progress (just test some values of journeyProgress to understand it (e.g. 0.1, 0.8, 1.3)
 		}
 	}
 }

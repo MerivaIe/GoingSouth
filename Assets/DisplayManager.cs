@@ -23,8 +23,8 @@ public class DisplayManager : MonoBehaviour {	//should this be static?
 	}
 	
 	void UpdateJourneyTrackingSliders() {
-		foreach (TrainTracker trainDisplay in trainTrackers) {
-			trainDisplay.slider.value = trainDisplay.train.GetJourneyProgress ();
+		foreach (TrainTracker trainTracker in trainTrackers) {
+			trainTracker.slider.value = trainTracker.train.GetJourneyProgress ();
 		}
 	}
 

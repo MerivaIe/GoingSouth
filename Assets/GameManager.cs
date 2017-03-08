@@ -50,6 +50,8 @@ public class GameManager : MonoBehaviour {
 
 	static void GenerateTimetable(List<Destination> destinations) {	//decided by player: for each destination, avg time between trains
 		//...but at the moment just some dummy stuff in here for the five trains in scene
+
+		//TODO configure these so that they are the correct trains going to the correct platforms
 		TimetableItem timetableItem = new TimetableItem(destinations[0],dayStartInMinutes + minutesPerSecond * 50f);
 		timetableItem.SetTrain (trainPool[0]);
 		timetableItem.SetPlatform (platforms[0]);
@@ -72,7 +74,7 @@ public class GameManager : MonoBehaviour {
 
 		timetableItem = new TimetableItem(destinations[2],dayStartInMinutes + minutesPerSecond * 100f);
 		timetableItem.SetTrain (trainPool[4]);
-		timetableItem.SetPlatform (platforms[4]);
+		timetableItem.SetPlatform (platforms[3]);
 		timetable.Add (timetableItem);
 
 	}
