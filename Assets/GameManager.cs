@@ -4,31 +4,43 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Linq;
 
-public class GameManager : MonoBehaviour {
+public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 	public const float minutesPerSecond = 1f;
 	public const int dayStartInMinutes = 180;
-	public static Platform[] platforms{ get; private set; }
-	public static List<Destination> destinations{ get; private set; }
-	public static List<TimetableItem> timetable{ get; private set; }
-	public static List<Color> defaultColors{ get; private set; }
-	public static List<Train> trainPool { get; private set; }
+	public Platform[] platforms{ get; private set; }
+	public List<Destination> destinations{ get; private set; }
+	public List<TimetableItem> timetable{ get; private set; }
+	public List<Train> trainPool { get; private set; }
+	public List<Material> defaultMaterialColors;
 
 	private Text clockText;
+	private static GameManager s_Instance = null;
+
+	public static GameManager instance {
+		get {
+			if (s_Instance == null) {	//Find GameManager in hierarchy
+				s_Instance =  FindObjectOfType<GameManager>();
+			}
+				
+			if (s_Instance == null) {	// If it is still null, create a new instance
+				GameObject obj = new GameObject("GameManager");
+				s_Instance = obj.AddComponent<GameManager>();
+				Debug.LogWarning ("Could not locate a GameManager object so one was added to the Scene automatically. This is a problem: colors are set at design time.");
+			}
+			return s_Instance;
+		}
+	}
+
+	void OnApplicationQuit() {	//is this required
+		s_Instance = null;
+	}
 
 	void Awake () {
 		clockText = GameObject.Find ("ClockText").GetComponent <Text> ();
 
 		if (platforms != null || trainPool!= null || destinations!= null) {
-			Debug.LogWarning ("Another GameManager has already assigned to static variables. There should only be one GameManager in the scene.");
+			Debug.LogWarning ("Another GameManager has somehow assigned to variables. There should only be one GameManager in the scene.");
 		} else {
-			defaultColors = new List<Color> ();
-			defaultColors.Add (Color.blue);
-			defaultColors.Add (Color.cyan);
-			defaultColors.Add (Color.green);
-			defaultColors.Add (Color.magenta);
-			defaultColors.Add (Color.red);
-			defaultColors.Add (Color.yellow);
-
 			trainPool = GameObject.FindObjectsOfType<Train> ().ToList ();	//this would eventually be Instantiating trains at level load based on user decisions
 			platforms = GameObject.FindObjectsOfType <Platform> ();
 
@@ -48,7 +60,7 @@ public class GameManager : MonoBehaviour {
 		clockText.text = string.Format("{0:#00}:{1:00}", Mathf.Floor(timeToDisplay/60),Mathf.Floor(timeToDisplay) % 60);
 	}
 
-	static void GenerateTimetable(List<Destination> destinations) {	//decided by player: for each destination, avg time between trains
+	void GenerateTimetable(List<Destination> destinations) {	//decided by player: for each destination, avg time between trains
 		//...but at the moment just some dummy stuff in here for the five trains in scene
 
 		//TODO configure these so that they are the correct trains going to the correct platforms
@@ -79,7 +91,7 @@ public class GameManager : MonoBehaviour {
 
 	}
 
-	public static Train GetNextTrain(Platform platform) {
+	public Train GetNextTrain(Platform platform) {
 		TimetableItem timeTableItem = timetable.FirstOrDefault (a => a.platform == platform);
 		if (timeTableItem == default(TimetableItem)) {
 			Debug.LogWarning ("This platform is requesting next train but has no entries in the timetable.");
@@ -93,7 +105,7 @@ public class GameManager : MonoBehaviour {
 		return null;
 	}
 
-	static void AssignTrainToNewTimetableItem(Train train,Destination destination) {	//TODO call on train once first assigned or reassigned to destination
-		train.SetTrainColor (destination.color);
+	void AssignTrainToNewTimetableItem(Train train,Destination destination) {	//TODO call on train once first assigned or reassigned to destination
+		train.SetTrainColor (destination.materialColor);
 	}
 }

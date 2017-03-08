@@ -9,7 +9,7 @@ public class Train : MonoBehaviour {
 	public enum TrainStatus {EnteringStation,Braking,BoardingTime,Accelerating,LeavingStation,Idle}
 	public TrainStatus status;
 	public Vector3 direction;	//this should eventually be replaced with just transform.forward everywhere
-	public Color color;
+	public Material materialColor;
 	public SphereCollider[] doors {get; private set;}	//has to be collider so that transform is queried once train reaches platform
 	public float length { get; private set; }
 
@@ -140,12 +140,10 @@ public class Train : MonoBehaviour {
 		}
 	}
 
-	public void SetTrainColor(Color _color) {
-		color = _color;
+	public void SetTrainColor(Material _materialColor) {
+		materialColor = _materialColor;
 		foreach (MeshRenderer meshRenderer in GetComponentsInChildren <MeshRenderer>()) {	//set all external faces of train to this color
-			if (meshRenderer.material.name == "TrainExternal") {
-				meshRenderer.material.color = color;
-			}
+			//TODO: for each meshrenderer in scene set its material = color (use shared material = materialColor)
 		}
 	}
 	public void SetCurrentTimetableItem(TimetableItem timetableItem) {

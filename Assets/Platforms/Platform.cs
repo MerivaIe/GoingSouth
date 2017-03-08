@@ -16,7 +16,7 @@ public class Platform : MonoBehaviour {
 
 	void Start () {
 		platformTriggerBounds = GetComponentInChildren<PlatformTrigger>().gameObject.GetComponent <BoxCollider>().bounds;
-		incomingTrain = GameManager.GetNextTrain (this);
+		incomingTrain = GameManager.instance.GetNextTrain (this);
 
 		CalculateNewWaitLocations ();
 	}
