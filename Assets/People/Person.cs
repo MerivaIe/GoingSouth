@@ -65,13 +65,12 @@ public class Person : MonoBehaviour {
 		if (status == PersonStatus.MovingToPlatform || status == PersonStatus.Compromised || status == PersonStatus.SatDown) {return;}	//could this be made quicker using bitwise operations on enum flags?
 		if (!currentPlatform.incomingTrain) {return;}
 
-		switch (currentPlatform.incomingTrain.status) {
-		case Train.TrainStatus.BoardingTime:
+		if (currentPlatform.incomingTrain.status == Train.TrainStatus.BoardingTime) {
 			if (status == PersonStatus.FindingSeat) {
 				if (rb.mass == 10f && Vector3.Angle (transform.up, Vector3.up) < 30f) {	//if this is a light person and they are standing then add up force for crowd surfing
 					rb.AddForce (Vector3.up, ForceMode.Acceleration);
 				}
-				break;
+				return;
 			}
 			//this will execute just once if train is at station to ready person: could be done in a one off method called by either train at arrival time or platform if someone arrives and train is here... increases complexity of model but performance would likely improve
 			if (status == PersonStatus.ReadyToBoard) {
@@ -92,12 +91,7 @@ public class Person : MonoBehaviour {
 			} else {
 				rb.velocity = nmAgent.speed * boardingVector.normalized;
 			}
-			break;
-		case Train.TrainStatus.Idle:
-		case Train.TrainStatus.Accelerating:
-		case Train.TrainStatus.LeavingStation:
-		case Train.TrainStatus.EnteringStation:
-		case Train.TrainStatus.Braking:	//Need to also make it so that people fall off platform
+		} else { //catches all other train statuses
 			if (status == PersonStatus.MovingToTrainDoor || status == PersonStatus.BoardingTrain) {	//pick up anyone who failed to board train
 				status = PersonStatus.ReadyToBoard;
 			}
@@ -124,7 +118,6 @@ public class Person : MonoBehaviour {
 					rb.AddForce (toPlatformTarget.normalized * nudgeForce, ForceMode.Acceleration);	//TODO could improve performance further by setting direction just once? (normalized is heavy)
 				}
 			}
-			break;
 		}
 	}
 

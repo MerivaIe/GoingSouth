@@ -7,7 +7,7 @@ using System.Linq;
 public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 	public const float minutesPerSecond = 1f;
 	public const int dayStartInMinutes = 180;
-	public Platform[] platforms{ get; private set; }
+	public List<Platform> platforms{ get; private set; }
 	public List<Destination> destinations{ get; private set; }
 	public List<TimetableItem> timetable{ get; private set; }
 	public List<Train> trainPool { get; private set; }
@@ -36,28 +36,37 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 	}
 
 	void Awake () {
+		if (defaultMaterialColors.Count == 0) {
+			Debug.LogWarning ("No materials assigned to default color array in GameManager. Please do so.");
+		}
+
 		clockText = GameObject.Find ("ClockText").GetComponent <Text> ();
 
 		if (platforms != null || trainPool!= null || destinations!= null) {
 			Debug.LogWarning ("Another GameManager has somehow assigned to variables. There should only be one GameManager in the scene.");
 		} else {
-			trainPool = GameObject.FindObjectsOfType<Train> ().ToList ();	//this would eventually be Instantiating trains at level load based on user decisions
-			platforms = GameObject.FindObjectsOfType <Platform> ();
+			//trainPool = GameObject.FindObjectsOfType<Train> ().ToList ();	//this would eventually be Instantiating trains at level load based on user decisions
+			trainPool = new List<Train>();
+			trainPool.Add(GameObject.Find ("Train (1)").GetComponent <Train>());
+			trainPool.Add(GameObject.Find ("Train (2)").GetComponent <Train>());
+			trainPool.Add(GameObject.Find ("Train (3)").GetComponent <Train>());
+			trainPool.Add(GameObject.Find ("Train (4)").GetComponent <Train>());
+
+			//platforms = GameObject.FindObjectsOfType <Platform> ();
+			platforms = new List<Platform>();
+			platforms.Add(GameObject.Find ("Platform (1)").GetComponent <Platform>());
+			platforms.Add(GameObject.Find ("Platform (2)").GetComponent <Platform>());
+			platforms.Add(GameObject.Find ("Platform (3)").GetComponent <Platform>());
+			platforms.Add(GameObject.Find ("Platform (4)").GetComponent <Platform>());
 
 			destinations = new List<Destination> ();
-			destinations.Add (new Destination ("Bristow", 50f, 6));
-			destinations.Add (new Destination ("Lomdom", 10f, 8));
-			destinations.Add (new Destination ("Basimgstoke", 5f, 1000));
+			destinations.Add (new Destination ("Bristow", 200, 300));
+			destinations.Add (new Destination ("Lomdom", 70, 2000));
+			destinations.Add (new Destination ("Basimgstoke", 100, 1000));
 
 			timetable = new List<TimetableItem>();
 			GenerateTimetable (destinations);
 		}
-	}
-
-	void Update() {
-		//TODO: do this from the display and calculate on demand once every second, alongside journey times and other interface things....
-		float timeToDisplay = dayStartInMinutes + minutesPerSecond * Time.time;
-		clockText.text = string.Format("{0:#00}:{1:00}", Mathf.Floor(timeToDisplay/60),Mathf.Floor(timeToDisplay) % 60);
 	}
 
 	void GenerateTimetable(List<Destination> destinations) {	//decided by player: for each destination, avg time between trains
@@ -65,30 +74,30 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 
 		//TODO configure these so that they are the correct trains going to the correct platforms
 		TimetableItem timetableItem = new TimetableItem(destinations[0],dayStartInMinutes + minutesPerSecond * 50f);
-		timetableItem.SetTrain (trainPool[0]);
 		timetableItem.SetPlatform (platforms[0]);
+		timetableItem.SetTrain (trainPool[0]);
 		timetable.Add (timetableItem);
 
 		timetableItem = new TimetableItem(destinations[0],dayStartInMinutes + minutesPerSecond * 100f);
-		timetableItem.SetTrain (trainPool[1]);
 		timetableItem.SetPlatform (platforms[1]);
+		timetableItem.SetTrain (trainPool[1]);
 		timetable.Add (timetableItem);
 
 		timetableItem = new TimetableItem(destinations[1],dayStartInMinutes + minutesPerSecond * 50f);
-		timetableItem.SetTrain (trainPool[2]);
 		timetableItem.SetPlatform (platforms[2]);
-		timetable.Add (timetableItem);
-
-		timetableItem = new TimetableItem(destinations[1],dayStartInMinutes + minutesPerSecond * 100f);
-		timetableItem.SetTrain (trainPool[3]);
-		timetableItem.SetPlatform (platforms[3]);
+		timetableItem.SetTrain (trainPool[2]);
 		timetable.Add (timetableItem);
 
 		timetableItem = new TimetableItem(destinations[2],dayStartInMinutes + minutesPerSecond * 100f);
-		timetableItem.SetTrain (trainPool[4]);
 		timetableItem.SetPlatform (platforms[3]);
+		timetableItem.SetTrain (trainPool[3]);
 		timetable.Add (timetableItem);
-
+	}
+		
+	void Update() {
+		//TODO: do this from the display and calculate on demand once every second, alongside journey times and other interface things....
+		float timeToDisplay = dayStartInMinutes + minutesPerSecond * Time.time;
+		clockText.text = string.Format("{0:#00}:{1:00}", Mathf.Floor(timeToDisplay/60),Mathf.Floor(timeToDisplay) % 60);
 	}
 
 	public Train GetNextTrain(Platform platform) {

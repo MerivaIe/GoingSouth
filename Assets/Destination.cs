@@ -8,12 +8,12 @@ using UnityEngine;
 public class Destination {
 	public Material materialColor{ get; private set; }
 	public string name{ get; private set; }
-	public float routeLength { get; private set; }
+	public int routeLength { get; private set; }
 
 	int estimatedDailyFootfall;
 	static List<Material> availableMaterialColors = new List<Material>();
 
-	public Destination(string _name, float _routeLength, int _estimatedDailyFootfall) {
+	public Destination(string _name, int _routeLength, int _estimatedDailyFootfall) {
 		name = _name;
 		routeLength = _routeLength;	//in km
 		estimatedDailyFootfall = _estimatedDailyFootfall;

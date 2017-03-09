@@ -24,7 +24,7 @@ public class PersonSpawner : MonoBehaviour {
 				GameObject personGO = Instantiate (personPrefab, spawnPoint.transform.position, Quaternion.identity) as GameObject;
 				personGO.transform.parent = organisingParent.transform;
 				Vector3 somePos = GameManager.instance.platforms [0].transform.position;
-				Vector3 platformPos = GameManager.instance.platforms[Random.Range (0, GameManager.instance.platforms.Length)].transform.position;	//set platform destination randomly from publically exposed platforms
+				Vector3 platformPos = GameManager.instance.platforms[Random.Range (0, GameManager.instance.platforms.Count)].transform.position;	//set platform destination randomly from publically exposed platforms
 				personGO.GetComponent <Person>().SetMovingToPlatform (platformPos);
 			}
 		}
