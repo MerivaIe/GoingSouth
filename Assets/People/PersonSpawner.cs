@@ -21,9 +21,7 @@ public class PersonSpawner : MonoBehaviour {
 	void Update () {
 		foreach (Spawnpoint spawnPoint in spawnPoints) {
 			if (IsTimeToSpawn ()) {
-				GameObject personGO = Instantiate (personPrefab, spawnPoint.transform.position, Quaternion.identity) as GameObject;
-				personGO.transform.parent = organisingParent.transform;
-				Vector3 somePos = GameManager.instance.platforms [0].transform.position;
+				GameObject personGO = Instantiate (personPrefab, spawnPoint.transform.position, Quaternion.identity,organisingParent.transform) as GameObject;
 				Vector3 platformPos = GameManager.instance.platforms[Random.Range (0, GameManager.instance.platforms.Count)].transform.position;	//set platform destination randomly from publically exposed platforms
 				personGO.GetComponent <Person>().SetMovingToPlatform (platformPos);
 			}

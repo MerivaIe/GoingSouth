@@ -6,6 +6,9 @@ using System.Linq;
 
 public class DisplayManager : MonoBehaviour {
 
+	public GameObject timetableItemsParent;
+	public GameObject timetableItemPrefab; 
+
 	private List<TrainTracker> trainTrackers = new List<TrainTracker>();
 
 	private static DisplayManager s_Instance = null;
@@ -30,6 +33,9 @@ public class DisplayManager : MonoBehaviour {
 	}
 
 	void Start () {
+		if (timetableItemPrefab == null || timetableItemsParent == null) {
+			Debug.LogWarning ("No timetable item prefab and/or the parent object for them assigned. Please do so.");
+		}
 		Slider[] sliders = GameObject.FindObjectsOfType <Slider> ();	//use this for now just to get sliders, but eventually you should create sliders from a prefab.. one for each train
 		if (GameManager.instance.trainPool == null || GameManager.instance.trainPool.Count == 0) {
 			Debug.LogWarning ("DisplayManager is trying to access GameManager's train pool but it is not initialised or empty.");
@@ -47,6 +53,12 @@ public class DisplayManager : MonoBehaviour {
 		foreach (TrainTracker trainTracker in trainTrackers) {
 			trainTracker.slider.value = trainTracker.train.GetJourneyProgress ();
 		}
+	}
+
+	public void OnClick_NewTimetableItem() {
+		//TODO PLACE THIS BACK IN WHEN MAKING
+		//GameObject timetableItemGO = Instantiate (timetableItemPrefab,timetableItemsParent) as GameObject;
+		//pass the message back to the GameManager to add an item to the model
 	}
 
 	private struct TrainTracker {
