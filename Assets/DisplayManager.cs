@@ -56,9 +56,10 @@ public class DisplayManager : MonoBehaviour {
 	}
 
 	public void OnClick_NewTimetableItem() {
-		//TODO PLACE THIS BACK IN WHEN MAKING
-		//GameObject timetableItemGO = Instantiate (timetableItemPrefab,timetableItemsParent) as GameObject;
 		//pass the message back to the GameManager to add an item to the model
+		//once GameManager has confirmed that eveyrthing is ok then make a new display item
+		GameObject timetableItemGO = Instantiate (timetableItemPrefab,timetableItemsParent.transform) as GameObject;
+
 	}
 
 	private struct TrainTracker {

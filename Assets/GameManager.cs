@@ -47,19 +47,19 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 		} else {
 			//trainPool = GameObject.FindObjectsOfType<Train> ().ToList ();	//this would eventually be Instantiating trains at level load based on user decisions
 			trainPool = new List<Train>();
-//			trainPool.Add(GameObject.Find ("Train (1)").GetComponent <Train>());
-//			trainPool.Add(GameObject.Find ("Train (2)").GetComponent <Train>());
-//			trainPool.Add(GameObject.Find ("Train (3)").GetComponent <Train>());
-//			trainPool.Add(GameObject.Find ("Train (4)").GetComponent <Train>());
-			trainPool.Add(GameObject.Find ("Complex Train (1)").GetComponent <Train>());
+			trainPool.Add(GameObject.Find ("Train (1)").GetComponent <Train>());
+			trainPool.Add(GameObject.Find ("Train (2)").GetComponent <Train>());
+			trainPool.Add(GameObject.Find ("Train (3)").GetComponent <Train>());
+			trainPool.Add(GameObject.Find ("Train (4)").GetComponent <Train>());
+			//trainPool.Add(GameObject.Find ("Complex Train (1)").GetComponent <Train>());
 
 			//platforms = GameObject.FindObjectsOfType <Platform> ();
 			platforms = new List<Platform>();
-//			platforms.Add(GameObject.Find ("Platform (1)").GetComponent <Platform>());
-//			platforms.Add(GameObject.Find ("Platform (2)").GetComponent <Platform>());
-//			platforms.Add(GameObject.Find ("Platform (3)").GetComponent <Platform>());
-//			platforms.Add(GameObject.Find ("Platform (4)").GetComponent <Platform>());
-			platforms.Add(GameObject.Find ("PlatformTest").GetComponent <Platform>());
+			platforms.Add(GameObject.Find ("Platform (1)").GetComponent <Platform>());
+			platforms.Add(GameObject.Find ("Platform (2)").GetComponent <Platform>());
+			platforms.Add(GameObject.Find ("Platform (3)").GetComponent <Platform>());
+			platforms.Add(GameObject.Find ("Platform (4)").GetComponent <Platform>());
+			//platforms.Add(GameObject.Find ("PlatformTest").GetComponent <Platform>());
 
 			destinations = new List<Destination> ();
 			destinations.Add (new Destination ("Bristow", 200, 300));
