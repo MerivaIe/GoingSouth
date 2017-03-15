@@ -1,0 +1,21 @@
+fileFormatVersion: 2
+guid: 1e01384d1519e6c4aaa48978625680e0
+timeCreated: 1489606675
+licenseType: Free
+TrueTypeFontImporter:
+  serializedVersion: 4
+  fontSize: 16
+  forceTextureCase: -2
+  characterSpacing: 0
+  characterPadding: 1
+  includeFontData: 1
+  fontName: Railway
+  fontNames:
+  - Railway
+  fallbackFontReferences: []
+  customCharacters: 
+  fontRenderingMode: 0
+  ascentCalculationMode: 1
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
