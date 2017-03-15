@@ -1,0 +1,21 @@
+fileFormatVersion: 2
+guid: 35216dd87cff3c44bb4e05b0465f04ee
+timeCreated: 1489579403
+licenseType: Free
+TrueTypeFontImporter:
+  serializedVersion: 4
+  fontSize: 16
+  forceTextureCase: -2
+  characterSpacing: 0
+  characterPadding: 1
+  includeFontData: 1
+  fontName: BritishRailDarkNormal
+  fontNames:
+  - BritishRailDarkNormal
+  fallbackFontReferences: []
+  customCharacters: 
+  fontRenderingMode: 0
+  ascentCalculationMode: 1
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

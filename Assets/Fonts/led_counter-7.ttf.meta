@@ -1,0 +1,22 @@
+fileFormatVersion: 2
+guid: c8654b6b3f0d422488805302d05849cd
+timeCreated: 1489585084
+licenseType: Free
+TrueTypeFontImporter:
+  serializedVersion: 4
+  fontSize: 16
+  forceTextureCase: -2
+  characterSpacing: 0
+  characterPadding: 1
+  includeFontData: 1
+  fontName: LED Counter 7
+  fontNames:
+  - LED Counter 7
+  fallbackFontReferences:
+  - {fileID: 12800000, guid: 866a141d92f2d3b4a88890d96911a284, type: 3}
+  customCharacters: 
+  fontRenderingMode: 0
+  ascentCalculationMode: 1
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
