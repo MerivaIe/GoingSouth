@@ -12,6 +12,7 @@ public class Train : MonoBehaviour {
 	public Material materialColor;
 	public SphereCollider[] doors {get; private set;}	//has to be collider so that transform is queried once train reaches platform
 	public float length { get; private set; }
+	public string trainSerialID { get; private set; }
 
 	private Rigidbody rb;
 	private Animator animator;
@@ -20,6 +21,7 @@ public class Train : MonoBehaviour {
 	private TimetableItem myCurrentTimetableItem;
 
 	void Start () {
+		trainSerialID = string.Format("{0:X}",this.GetHashCode ());
 		rb = GetComponent <Rigidbody> ();
 		length = 20f; 				//TODO hard coded
 		animator = GetComponent <Animator>();

@@ -9,6 +9,7 @@ public class Platform : MonoBehaviour {
 	[Tooltip("MUST SET THIS MANUALLY AS NAVMESH API IS LACKING")]
 	public float nmAgentRadius = 0.5f;
 	public float waitSpacing = 1f;
+	public int platformNumber;
 	public Train incomingTrain { get; private set; }
 
 	private List<WaitLocation> waitLocations = new List<WaitLocation> ();
