@@ -12,8 +12,8 @@ public class DisplayManager : MonoBehaviour {
 	private List<TrainTracker> trainTrackers = new List<TrainTracker>();
 	private GameObject defaultOptionsMenu, itemCreationMenu;
 	private Dropdown destinationDropdown, trainDropdown, platformDropdown;
-	private Text clockText,timetableTimeText;
-	private float timetableTimeInGame;	//this is a float value to store the game time of timetable items being created (this will be changed and then to display just converts this to display formatting)
+	private Text clockText,schedDepartureTimeText;
+	private float schedDepartureTimeInGame;	//this is a float value to store the game time of timetable items being created (this will be changed and then to display just converts this to display formatting)
 
 	private static DisplayManager s_Instance = null;
 
@@ -52,17 +52,25 @@ public class DisplayManager : MonoBehaviour {
 			}
 		}
 
-		itemCreationMenu = MyFindUIObjectWithTag ("UI_ItemCreationMenu");
+		itemCreationMenu = MyFindUIObjectWithTag ("UI_ItemCreationMenu");	//note: must have all of the menus activated initially to find their elements, then deactivate them later
 		defaultOptionsMenu = MyFindUIObjectWithTag ("UI_DefaultOptionsMenu");
 		destinationDropdown = MyFindUIObjectWithTag ("UI_DestinationDropdown").GetComponent <Dropdown>();
-		trainDropdown = MyFindUIObjectWithTag ("UI_TrainDropdown").GetComponent <Dropdown>();
-		platformDropdown = MyFindUIObjectWithTag ("UI_PlatformDropdown").GetComponent <Dropdown>();
-		clockText = MyFindUIObjectWithTag ("UI_ClockText").GetComponent <Text> ();
-		timetableTimeText = MyFindUIObjectWithTag ("UI_TimetableTimeText").GetComponent <Text> ();
+		//need to create an entire new menu which does the following:
+		//displays departure time, and destination labels
+		//can edit train and platform (code for these is set up below but GameObjects required)
+		//can cancel or delay departure...work out the cost for this later
 
+		//trainDropdown = MyFindUIObjectWithTag ("UI_TrainDropdown").GetComponent <Dropdown>();
+		//platformDropdown = MyFindUIObjectWithTag ("UI_PlatformDropdown").GetComponent <Dropdown>();
+		clockText = MyFindUIObjectWithTag ("UI_ClockText").GetComponent <Text> ();
+		schedDepartureTimeText = MyFindUIObjectWithTag ("UI_SchedDepartureTimeText").GetComponent <Text> ();
+
+		destinationDropdown.ClearOptions ();
 		destinationDropdown.AddOptions (GameManager.instance.destinations.Select (a=>a.name).ToList ());
-		platformDropdown.AddOptions (GameManager.instance.platforms.Select (a=>a.platformNumber.ToString ()).ToList ());
-		trainDropdown.AddOptions (GameManager.instance.trainPool.Select (a=>a.trainSerialID).ToList ());
+		//platformDropdown.AddOptions (GameManager.instance.platforms.Select (a=>a.platformNumber.ToString ()).ToList ());
+		//trainDropdown.AddOptions (GameManager.instance.trainPool.Select (a=>a.trainSerialID).ToList ());
+
+		itemCreationMenu.SetActive (false);	//finally hide the non-default menus
 
 		InvokeRepeating ("UpdateDisplay",0f,1f);		//start a repeating invoke that updates the display at interval
 	}
@@ -71,7 +79,7 @@ public class DisplayManager : MonoBehaviour {
 		GameObject foundGameObject;
 		try {
 			foundGameObject = GameObject.FindGameObjectWithTag (searchForTag);
-		} catch {
+		} catch {				//TODO: THIS DOESNT SEEM TO BE WORKING TAKE A LOOK AT THIS
 			Debug.LogWarning ("Could not find UI gameObject with tag: " + searchForTag + ". Display will likely not function as expected.");
 			return null;
 		}
@@ -92,8 +100,8 @@ public class DisplayManager : MonoBehaviour {
 	#region Default Options Menu Actions
 	public void OnClick_NewTimetableItem() {
 		defaultOptionsMenu.SetActive (false);
-		timetableTimeInGame = GameManager.instance.GetCurrentGameTime ();
-		timetableTimeText.text = ConvertGameTimeToHHMM (timetableTimeInGame);	//initially set the time to the current time
+		schedDepartureTimeInGame = GameManager.instance.GetCurrentGameTime ();
+		schedDepartureTimeText.text = ConvertGameTimeToHHMM (schedDepartureTimeInGame);	//initially set the time to the current time
 		itemCreationMenu.SetActive (true);
 	}
 	#endregion
@@ -106,15 +114,16 @@ public class DisplayManager : MonoBehaviour {
 
 	public void OnClick_ConfirmCreatedItem() {
 		
-		//pass message to the GameManager to validate and add an item to the model
-		GameManager.instance.CreateTimetableItem (GameManager.instance.destinations[destinationDropdown.value],timetableTimeInGame);
-		//once GameManager has confirmed that eveyrthing is ok then make a new display item
-		//GameObject timetableItemGO = Instantiate (timetableItemPrefab,timetableItemsParent.transform) as GameObject;
+		//pass message to the GameManager to (validate?) and add an item to the model
+		TimetableItem newTimetableItem = GameManager.instance.CreateTimetableItem (GameManager.instance.destinations[destinationDropdown.value],schedDepartureTimeInGame);
+		GameObject timetableItemGO = Instantiate (timetableItemPrefab,timetableItemsParent.transform) as GameObject;
+		//TODO here we should get all 4 of the items to update for this component and do so
+		//this should be another Struct as for TrainTracker called TimetableItemDisplay, linking TimetableItem to instaniated GameObject
 	}
 
 	public void OnClick_ChangeTimetableTime(float changeValue) {
-		timetableTimeInGame += changeValue;
-		timetableTimeText.text = ConvertGameTimeToHHMM (timetableTimeInGame);
+		schedDepartureTimeInGame += changeValue;
+		schedDepartureTimeText.text = ConvertGameTimeToHHMM (schedDepartureTimeInGame);
 	}
 	#endregion
 

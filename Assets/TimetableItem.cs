@@ -6,15 +6,15 @@ using UnityEngine;
 /// ATM: centralised data repository. The idea being that there may be several journeys planned ahead of time without trains/platforms yet assigned to them
 /// </summary>
 public class TimetableItem {
-	public float scheduledArrivalTime;
+	public float scheduledDepartureTime;
 	public Platform platform;
 	public Train train;
 	public Destination destination;
 	public bool journeyInProgress;	//required?
 
-	public TimetableItem(Destination _destination, float _schedArrivalTime) {
+	public TimetableItem(Destination _destination, float _schedDepartureTime) {
 		destination = _destination;
-		scheduledArrivalTime = _schedArrivalTime;
+		scheduledDepartureTime = _schedDepartureTime;
 	}
 
 	public void SetTrain(Train _train) {

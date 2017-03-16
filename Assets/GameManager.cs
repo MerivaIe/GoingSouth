@@ -108,8 +108,10 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 		return null;
 	}
 
-	public void CreateTimetableItem(Destination destination,float scheduledTime) {
-		timetable.Add (new TimetableItem(destination,scheduledTime));
+	public TimetableItem CreateTimetableItem(Destination destination,float scheduledDepartureTime) {
+		TimetableItem newTimetableItem = new TimetableItem (destination, scheduledDepartureTime);
+		timetable.Add (newTimetableItem);
+		return newTimetableItem;
 		//TODO: do we need to send message back to calling (e.g. to DisplayManager)? ALSO should timetable item dislay have a reference to timetableitem model or should this be done some other way
 	}
 
