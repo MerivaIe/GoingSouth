@@ -13,7 +13,7 @@ public class TimetableItemUIReferenceWrapper : MonoBehaviour {
 	public Text platformText {get; private set;}
 	public Text trainText { get; private set; }
 
-	void Start() {
+	void Awake() {	//awake is required so this occurs before these components need to be used in calling class just after instantiation of this object
 		timeText = timeLabel.GetComponent <Text> ();
 		destinationText = destinationLabel.GetComponent <Text> ();
 		platformText = platformLabel.GetComponent <Text> ();
