@@ -1,0 +1,22 @@
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class TimetableItemUIReferenceWrapper : MonoBehaviour {
+
+	//to be assigned at design time in the prefab
+	public GameObject timeLabel,destinationLabel,platformLabel,trainLabel;
+	//these are then assigned at runtime and are exposed for access
+	public Text timeText {get; private set;}
+	public Text destinationText {get; private set;}
+	public Text platformText {get; private set;}
+	public Text trainText { get; private set; }
+
+	void Start() {
+		timeText = timeLabel.GetComponent <Text> ();
+		destinationText = destinationLabel.GetComponent <Text> ();
+		platformText = platformLabel.GetComponent <Text> ();
+		trainText = trainLabel.GetComponent <Text> ();
+	}
+}
