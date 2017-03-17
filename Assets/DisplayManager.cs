@@ -7,10 +7,12 @@ using System.Linq;
 public class DisplayManager : MonoBehaviour {
 
 	public GameObject timetableItemsParent;
-	public GameObject timetableItemPrefab; 
+	public GameObject timetableItemPrefab;
+	[Range(0.02f,1f)]
+	public float displayUpdateInterval;
 
 	private List<TrainTracker> trainTrackers = new List<TrainTracker>();
-	private GameObject defaultOptionsMenu, itemCreationMenu;
+	private GameObject defaultOptionsMenu, itemCreationMenu, itemModificationMenu;
 	private Dropdown destinationDropdown, trainDropdown, platformDropdown;
 	private Text clockText,schedDepartureTimeText;
 	private float schedDepartureTimeInGame;	//this is a float value to store the game time of timetable items being created (this will be changed and then to display just converts this to display formatting)
@@ -52,36 +54,38 @@ public class DisplayManager : MonoBehaviour {
 			}
 		}
 
-		itemCreationMenu = MyFindUIObjectWithTag ("UI_ItemCreationMenu");	//note: must have all of the menus activated initially to find their elements, then deactivate them later
-		defaultOptionsMenu = MyFindUIObjectWithTag ("UI_DefaultOptionsMenu");
+		defaultOptionsMenu = MyFindUIObjectWithTag ("UI_DefaultOptionsMenu");	//note: must have all of the menus activated initially to find their elements, then deactivate them later
+		itemCreationMenu = MyFindUIObjectWithTag ("UI_ItemCreationMenu");	
+		itemModificationMenu = MyFindUIObjectWithTag ("UI_ItemModificationMenu");	
+
 		destinationDropdown = MyFindUIObjectWithTag ("UI_DestinationDropdown").GetComponent <Dropdown>();
 		//need to create an entire new menu which does the following:
 		//displays departure time, and destination labels
 		//can edit train and platform (code for these is set up below but GameObjects required)
 		//can cancel or delay departure...work out the cost for this later
 
-		//trainDropdown = MyFindUIObjectWithTag ("UI_TrainDropdown").GetComponent <Dropdown>();
-		//platformDropdown = MyFindUIObjectWithTag ("UI_PlatformDropdown").GetComponent <Dropdown>();
+		trainDropdown = MyFindUIObjectWithTag ("UI_TrainDropdown").GetComponent <Dropdown>();
+		platformDropdown = MyFindUIObjectWithTag ("UI_PlatformDropdown").GetComponent <Dropdown>();
 		clockText = MyFindUIObjectWithTag ("UI_ClockText").GetComponent <Text> ();
 		schedDepartureTimeText = MyFindUIObjectWithTag ("UI_SchedDepartureTimeText").GetComponent <Text> ();
 
 		destinationDropdown.ClearOptions ();
 		destinationDropdown.AddOptions (GameManager.instance.destinations.Select (a=>a.name).ToList ());
-		//platformDropdown.AddOptions (GameManager.instance.platforms.Select (a=>a.platformNumber.ToString ()).ToList ());
-		//trainDropdown.AddOptions (GameManager.instance.trainPool.Select (a=>a.trainSerialID).ToList ());
+		platformDropdown.ClearOptions ();
+		platformDropdown.AddOptions (GameManager.instance.platforms.Select (a=>a.platformNumber.ToString ()).ToList ());
+		trainDropdown.ClearOptions ();
+		trainDropdown.AddOptions (GameManager.instance.trainPool.Select (a=>a.trainSerialID).ToList ());
 
 		itemCreationMenu.SetActive (false);	//finally hide the non-default menus
+		itemModificationMenu.SetActive (false);
 
-		InvokeRepeating ("UpdateDisplay",0f,1f);		//start a repeating invoke that updates the display at interval
+		InvokeRepeating ("UpdateDisplay",0f,displayUpdateInterval);		//start a repeating invoke that updates the display at interval
 	}
 
 	GameObject MyFindUIObjectWithTag(string searchForTag) {
-		GameObject foundGameObject;
-		try {
-			foundGameObject = GameObject.FindGameObjectWithTag (searchForTag);
-		} catch {				//TODO: THIS DOESNT SEEM TO BE WORKING TAKE A LOOK AT THIS
-			Debug.LogWarning ("Could not find UI gameObject with tag: " + searchForTag + ". Display will likely not function as expected.");
-			return null;
+		GameObject foundGameObject = GameObject.FindGameObjectWithTag (searchForTag);
+		if (foundGameObject == null) {
+			Debug.LogWarning ("Could not find UI game object with tag: " + searchForTag + ". Display will not function as expected.");
 		}
 		return foundGameObject;
 	}

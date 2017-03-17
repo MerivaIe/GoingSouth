@@ -21,7 +21,7 @@ public class Train : MonoBehaviour {
 	private TimetableItem myCurrentTimetableItem;
 
 	void Start () {
-		trainSerialID = string.Format("{0:X}",this.GetHashCode ());
+		trainSerialID = string.Format("{0:X}",this.GetHashCode ()).Substring (4);
 		rb = GetComponent <Rigidbody> ();
 		length = 20f; 				//TODO hard coded
 		animator = GetComponent <Animator>();
