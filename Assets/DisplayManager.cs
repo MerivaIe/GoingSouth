@@ -11,8 +11,8 @@ public class DisplayManager : MonoBehaviour {
 	[Range(0.02f,1f)]
 	public float displayUpdateInterval = 0.5f;
 
-	private Dictionary<TimetableItemUIObject,TimetableItem> timetableUITracker = new Dictionary<TimetableItemUIObject, TimetableItem> ();
-	private Dictionary<Slider,Train> trainUITracker = new Dictionary<Slider, Train> ();									//stored in a dic in case we need to use lookup in future, atm though it is only used in a full foreach loop over this dic to update sliders
+	private BiLookup<TimetableItemUIObject,TimetableItem> timetableUITracker;
+	private Dictionary<Slider,Train> trainUITracker;								//stored in a dic in case we need to use lookup in future, atm though it is only used in a full foreach loop over this dic to update sliders
 	private GameObject defaultOptionsMenu, itemCreationMenu, itemModificationMenu;
 	private Dropdown creation_destinationDropdown, modification_trainDropdown, modification_platformDropdown;
 	private Text clockText,creation_schedDepartureTimeText, modification_schedDepartureTimeText, modification_DestinationText;
@@ -40,6 +40,9 @@ public class DisplayManager : MonoBehaviour {
 	}
 
 	void Start () {				//must be after GameManager's Awake()
+		timetableUITracker =  new BiLookup<TimetableItemUIObject, TimetableItem> ();
+		trainUITracker = new Dictionary<Slider, Train> ();	
+
 		if (timetableItemPrefab == null || timetableItemsParent == null) {
 			Debug.LogWarning ("No timetable item prefab and/or the parent object for them assigned. Please do so.");
 		}
@@ -56,8 +59,8 @@ public class DisplayManager : MonoBehaviour {
 		}
 
 		defaultOptionsMenu = MyFindUIObjectWithTag ("UI_DefaultOptionsMenu");	//note: must have all of the menus activated initially to find their elements, then deactivate them later
-		itemCreationMenu = MyFindUIObjectWithTag ("UI_ItemCreationMenu");	
-		itemModificationMenu = MyFindUIObjectWithTag ("UI_ItemModificationMenu");	
+		itemCreationMenu = MyFindUIObjectWithTag ("UI_ItemCreationMenu");
+		itemModificationMenu = MyFindUIObjectWithTag ("UI_ItemModificationMenu");
 		
 		clockText = MyFindUIObjectWithTag ("UI_ClockText").GetComponent <Text> ();
 		creation_schedDepartureTimeText = MyFindUIObjectWithTag ("UI_Create_SchedDepartureTimeText").GetComponent <Text> ();
@@ -95,11 +98,17 @@ public class DisplayManager : MonoBehaviour {
 		clockText.text = ConvertGameTimeToHHMM (GameManager.instance.GetCurrentGameTime());
 	}
 
-	string ConvertGameTimeToHHMM(float gameTime) {
+	static string ConvertGameTimeToHHMM(float gameTime) {
 		return string.Format("{0:#00}:{1:00}", Mathf.Floor(gameTime/60),Mathf.Floor(gameTime) % 60);
 	}
 
-	#region Default Options Menu Actions
+	void ReturnToDefaultOptionsMenu(GameObject currentMenuToClose) {	//could make this more generic with menu to open to if UI gets more complex
+		activeTimetableItem = null;
+		currentMenuToClose.SetActive (false);
+		defaultOptionsMenu.SetActive (true);
+	}
+
+	//Default Options Menu
 	public void OnClick_NewTimetableItem() {
 		defaultOptionsMenu.SetActive (false);
 		//pass message to the GameManager to add an item to the Model and store in our activeTimetableItem reference for later manipulation
@@ -107,31 +116,29 @@ public class DisplayManager : MonoBehaviour {
 		creation_schedDepartureTimeText.text = ConvertGameTimeToHHMM (activeTimetableItem.scheduledDepartureTime);	//initially set the time to the current time
 		itemCreationMenu.SetActive (true);
 	}
-	public void OnClick_TimetableItemForModification(GameObject timetableItemGO) {
-		TimetableItemUIObject timetableUIObject = timetableItemGO.GetComponent <TimetableItemUIObject> ();
-		//place the timetable item [Model] for this particular timetable UI object in the activeTimetableItem reference
-		if (timetableUITracker.TryGetValue (timetableUIObject, out activeTimetableItem)) {
-			defaultOptionsMenu.SetActive (false);
-			//populate the 4 modification menu items with the values from this timetable item that is being modified
-			modification_schedDepartureTimeText.text = ConvertGameTimeToHHMM (activeTimetableItem.scheduledDepartureTime);
-			modification_DestinationText.text = activeTimetableItem.destination.name;
-			//note the following is premised upon the index of dropdown options and Model lists (i.e.trains,platforms) being identical as they were set up that way
-			modification_platformDropdown.value = GameManager.instance.platforms.IndexOf (activeTimetableItem.platform);	
-			modification_trainDropdown.value = GameManager.instance.trainPool.IndexOf (activeTimetableItem.train);
-			itemModificationMenu.SetActive (true);
-		} else {
-			Debug.LogWarning ("Player clicked a Timetable UI Item for modification but it was not found in the timetableUITracker dictionary of such items. Modification will not occur.");
+	public void OnClick_TimetableItemForModification(TimetableItemUIObject timetableUIObject) {
+		if (activeTimetableItem == null) {	//only if we don't have an item already selected
+			//place the timetable item [Model] for this particular timetable UI object in the activeTimetableItem reference
+			if (timetableUITracker.TryGetValueByFirst (timetableUIObject, out activeTimetableItem)) {
+				defaultOptionsMenu.SetActive (false);
+				//populate the 4 modification menu items with the values from this timetable item that is being modified
+				modification_schedDepartureTimeText.text = ConvertGameTimeToHHMM (activeTimetableItem.scheduledDepartureTime);
+				modification_DestinationText.text = activeTimetableItem.destination.name;
+				//note the following is premised upon the index of dropdown options and Model lists (i.e.trains,platforms) being identical as they were set up that way
+				modification_platformDropdown.value = GameManager.instance.platforms.IndexOf (activeTimetableItem.platform);	
+				modification_trainDropdown.value = GameManager.instance.trainPool.IndexOf (activeTimetableItem.train);
+				itemModificationMenu.SetActive (true);
+			} else {
+				Debug.LogWarning ("Player clicked a Timetable UI Item for modification but it was not found in the timetableUITracker dictionary of such items. Modification will not occur.");
+			}
 		}
 	}
-	#endregion
 
-	#region Item Creation Menu Actions
+	//Item Creation Menu Actions
 	public void OnClick_ValueChangedDestination(int indexOfDropdown) {
-
 		activeTimetableItem.destination = GameManager.instance.destinations [indexOfDropdown];
 	}
 	public void OnClick_ChangeSchedDeptTime(float changeValue) {
-
 		activeTimetableItem.scheduledDepartureTime += changeValue;
 		creation_schedDepartureTimeText.text = ConvertGameTimeToHHMM (activeTimetableItem.scheduledDepartureTime);
 	}
@@ -150,9 +157,8 @@ public class DisplayManager : MonoBehaviour {
 
 		ReturnToDefaultOptionsMenu (itemCreationMenu);
 	}
-	#endregion
 
-	#region Item Modification Menu Actions
+	//Item Modification Menu Actions
 	public void OnClick_ValueChangedTrain(int indexOfDropdown) {
 		activeTimetableItem.train = GameManager.instance.trainPool [indexOfDropdown];
 	}
@@ -162,23 +168,16 @@ public class DisplayManager : MonoBehaviour {
 	public void OnClick_CancelItemModification() {
 		ReturnToDefaultOptionsMenu (itemModificationMenu);
 	}
-	public void OnClick_ConfirmModifiedItem() {
+	public void OnClick_ConfirmModifiedItem() {	//leaving unbuilt until problem fixed with dictionary
 		TimetableItemUIObject timetableItemUIObject;
-		//TryGetValueBySecond
-		//timetableUITracker.TryGetValue (activeTimetableItem, out timetableItemUIObject);
+		timetableUITracker.TryGetValueBySecond (activeTimetableItem, out timetableItemUIObject);
 		if (activeTimetableItem.platform != null) {
-			//timetableItemUIObject.platformText.text = activeTimetableItem.platform.platformNumber.ToString ();
+			timetableItemUIObject.platformText.text = activeTimetableItem.platform.platformNumber.ToString ();
 		}
 		if (activeTimetableItem.train != null) {
-			//timetableItemUIObject.trainText.text = activeTimetableItem.train.trainSerialID.ToString ();
+			timetableItemUIObject.trainText.text = activeTimetableItem.train.trainSerialID.ToString ();
 		}
 		ReturnToDefaultOptionsMenu (itemModificationMenu);
 	}
-	#endregion
-
-	void ReturnToDefaultOptionsMenu(GameObject currentMenuToClose) {	//could make this more generic with menu to open to if UI gets more complex
-		activeTimetableItem = null;
-		currentMenuToClose.SetActive (false);
-		defaultOptionsMenu.SetActive (true);
-	}
+		
 }
