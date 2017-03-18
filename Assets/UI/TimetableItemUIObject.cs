@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class TimetableItemUIReferenceWrapper : MonoBehaviour {
+public class TimetableItemUIObject : MonoBehaviour {
 
 	//to be assigned at design time in the prefab
 	public GameObject timeLabel,destinationLabel,platformLabel,trainLabel;

@@ -9,17 +9,14 @@ public class DisplayManager : MonoBehaviour {
 	public GameObject timetableItemsParent;
 	public GameObject timetableItemPrefab;
 	[Range(0.02f,1f)]
-	public float displayUpdateInterval;
+	public float displayUpdateInterval = 0.5f;
 
-	private Dictionary<GameObject,TimetableItem> timetableUITracker = new Dictionary<GameObject, TimetableItem> ();
+	private Dictionary<TimetableItemUIObject,TimetableItem> timetableUITracker = new Dictionary<TimetableItemUIObject, TimetableItem> ();
 	private Dictionary<Slider,Train> trainUITracker = new Dictionary<Slider, Train> ();									//stored in a dic in case we need to use lookup in future, atm though it is only used in a full foreach loop over this dic to update sliders
 	private GameObject defaultOptionsMenu, itemCreationMenu, itemModificationMenu;
 	private Dropdown creation_destinationDropdown, modification_trainDropdown, modification_platformDropdown;
 	private Text clockText,creation_schedDepartureTimeText, modification_schedDepartureTimeText, modification_DestinationText;
-	//TODO MUST: Create a new timtableitem as soon as somsone clicks button and just reference that schedDepartureTime (via reference to currentTimetableItem, which is also used for modification)
-	//also then make dropdowns call into here to change the model values as soon as they are changed i.e. currentTimetableItem (and then add this to model only once they click confirm)...would this add unecessary overhead?
-	private float creation_schedDepartureTimeInGame;	//this is a float value to store the game time of timetable items being created (this will be changed and then to display just converts this to display formatting)
-	private TimetableItem currentTimetableItem;
+	private TimetableItem activeTimetableItem;	//only one timetableitem is created/modified at a time so we store a reference to it using this
 
 	private static DisplayManager s_Instance = null;
 
@@ -105,21 +102,22 @@ public class DisplayManager : MonoBehaviour {
 	#region Default Options Menu Actions
 	public void OnClick_NewTimetableItem() {
 		defaultOptionsMenu.SetActive (false);
-		creation_schedDepartureTimeInGame = GameManager.instance.GetCurrentGameTime ();
-		creation_schedDepartureTimeText.text = ConvertGameTimeToHHMM (creation_schedDepartureTimeInGame);	//initially set the time to the current time
+		//pass message to the GameManager to add an item to the Model and store in our activeTimetableItem reference for later manipulation
+		activeTimetableItem = GameManager.instance.CreateTimetableItem (GameManager.instance.destinations[0],GameManager.instance.GetCurrentGameTime ());
+		creation_schedDepartureTimeText.text = ConvertGameTimeToHHMM (activeTimetableItem.scheduledDepartureTime);	//initially set the time to the current time
 		itemCreationMenu.SetActive (true);
 	}
-	public void OnClick_TimetableItemForModification(GameObject timetableItemUIObject) {
-		TimetableItem timetableItemForMod;
-		if (timetableUITracker.TryGetValue (timetableItemUIObject, out timetableItemForMod)) {
+	public void OnClick_TimetableItemForModification(GameObject timetableItemGO) {
+		TimetableItemUIObject timetableUIObject = timetableItemGO.GetComponent <TimetableItemUIObject> ();
+		//place the timetable item [Model] for this particular timetable UI object in the activeTimetableItem reference
+		if (timetableUITracker.TryGetValue (timetableUIObject, out activeTimetableItem)) {
 			defaultOptionsMenu.SetActive (false);
 			//populate the 4 modification menu items with the values from this timetable item that is being modified
-			modification_schedDepartureTimeText.text = ConvertGameTimeToHHMM (timetableItemForMod.scheduledDepartureTime);
-			modification_DestinationText.text = timetableItemForMod.destination.name;
+			modification_schedDepartureTimeText.text = ConvertGameTimeToHHMM (activeTimetableItem.scheduledDepartureTime);
+			modification_DestinationText.text = activeTimetableItem.destination.name;
 			//note the following is premised upon the index of dropdown options and Model lists (i.e.trains,platforms) being identical as they were set up that way
-			modification_platformDropdown.value = GameManager.instance.platforms.IndexOf (timetableItemForMod.platform);	
-			modification_trainDropdown.value = GameManager.instance.trainPool.IndexOf (timetableItemForMod.train);
-			currentTimetableItem = timetableItemForMod;
+			modification_platformDropdown.value = GameManager.instance.platforms.IndexOf (activeTimetableItem.platform);	
+			modification_trainDropdown.value = GameManager.instance.trainPool.IndexOf (activeTimetableItem.train);
 			itemModificationMenu.SetActive (true);
 		} else {
 			Debug.LogWarning ("Player clicked a Timetable UI Item for modification but it was not found in the timetableUITracker dictionary of such items. Modification will not occur.");
@@ -128,48 +126,59 @@ public class DisplayManager : MonoBehaviour {
 	#endregion
 
 	#region Item Creation Menu Actions
-	public void OnClick_CancelItemCreation() {
-		itemCreationMenu.SetActive (false);
-		defaultOptionsMenu.SetActive (true);
+	public void OnClick_ValueChangedDestination(int indexOfDropdown) {
+
+		activeTimetableItem.destination = GameManager.instance.destinations [indexOfDropdown];
 	}
-
-	public void OnClick_ConfirmCreatedItem() {
-		//pass message to the GameManager to add an item to the Model
-		TimetableItem newTimetableItem = GameManager.instance.CreateTimetableItem (GameManager.instance.destinations[creation_destinationDropdown.value],creation_schedDepartureTimeInGame);
-		//generate a new UI object to display the timetable item's details to the player [View]
-		GameObject timetableItemUIObject = Instantiate (timetableItemPrefab,timetableItemsParent.transform) as GameObject;
-		//add the two newly generated objects to a tracking dictionary which allows quick lookups between View/Model later
-		timetableUITracker.Add (timetableItemUIObject,newTimetableItem);
-		//get a reference to the text elements of the timetable item UI object and then update the time and destination (train/platform set later)
-		TimetableItemUIReferenceWrapper timetableUIRef = timetableItemUIObject.GetComponent <TimetableItemUIReferenceWrapper>();
-		timetableUIRef.timeText.text = ConvertGameTimeToHHMM(newTimetableItem.scheduledDepartureTime);
-		timetableUIRef.destinationText.text = newTimetableItem.destination.name;
-
-		itemCreationMenu.SetActive (false);
-		defaultOptionsMenu.SetActive (true);
-	}
-
 	public void OnClick_ChangeSchedDeptTime(float changeValue) {
-		creation_schedDepartureTimeInGame += changeValue;
-		creation_schedDepartureTimeText.text = ConvertGameTimeToHHMM (creation_schedDepartureTimeInGame);
+
+		activeTimetableItem.scheduledDepartureTime += changeValue;
+		creation_schedDepartureTimeText.text = ConvertGameTimeToHHMM (activeTimetableItem.scheduledDepartureTime);
+	}
+	public void OnClick_CancelItemCreation() {
+		ReturnToDefaultOptionsMenu (itemCreationMenu);
+	}
+	public void OnClick_ConfirmCreatedItem() {
+		//Generate a new UI object to display the timetable item's details to the player [View]
+		GameObject timetableItemGO = Instantiate (timetableItemPrefab,timetableItemsParent.transform) as GameObject;
+		TimetableItemUIObject timetableItemUIObject = timetableItemGO.GetComponent <TimetableItemUIObject>();
+		//Get the reference to the text elements of the timetable item UI object and then update the time and destination (train/platform set later)
+		timetableItemUIObject.timeText.text = ConvertGameTimeToHHMM(activeTimetableItem.scheduledDepartureTime);
+		timetableItemUIObject.destinationText.text = activeTimetableItem.destination.name;
+		//add the two newly generated objects to a tracking bi-lookup which allows quick lookups between View/Model later
+		timetableUITracker.Add (timetableItemUIObject,activeTimetableItem);
+
+		ReturnToDefaultOptionsMenu (itemCreationMenu);
 	}
 	#endregion
 
 	#region Item Modification Menu Actions
+	public void OnClick_ValueChangedTrain(int indexOfDropdown) {
+		activeTimetableItem.train = GameManager.instance.trainPool [indexOfDropdown];
+	}
+	public void OnClick_ValueChangedPlatform(int indexOfDropdown) {
+		activeTimetableItem.platform = GameManager.instance.platforms [indexOfDropdown];
+	}
 	public void OnClick_CancelItemModification() {
-		itemModificationMenu.SetActive (false);
-		defaultOptionsMenu.SetActive (true);
+		ReturnToDefaultOptionsMenu (itemModificationMenu);
 	}
 	public void OnClick_ConfirmModifiedItem() {
-		//TODO: make timetableUItrakcer a bidictionary as per Jon Skeet's implementation...
-		//timetableItemUIObject = timetableUITracker.getuitimetableitem using currentTimetableItem
-		TimetableItemUIReferenceWrapper timetableUIRef = timetableItemUIObject.GetComponent <TimetableItemUIReferenceWrapper>();
-		if (currentTimetableItem.platform != null) {
-			timetableUIRef.platformText.text = currentTimetableItem.platform.platformNumber.ToString ();
+		TimetableItemUIObject timetableItemUIObject;
+		//TryGetValueBySecond
+		//timetableUITracker.TryGetValue (activeTimetableItem, out timetableItemUIObject);
+		if (activeTimetableItem.platform != null) {
+			//timetableItemUIObject.platformText.text = activeTimetableItem.platform.platformNumber.ToString ();
 		}
-		if (currentTimetableItem.train != null) {
-			timetableUIRef.trainText.text = currentTimetableItem.train.trainSerialID.ToString ();
+		if (activeTimetableItem.train != null) {
+			//timetableItemUIObject.trainText.text = activeTimetableItem.train.trainSerialID.ToString ();
 		}
+		ReturnToDefaultOptionsMenu (itemModificationMenu);
 	}
 	#endregion
+
+	void ReturnToDefaultOptionsMenu(GameObject currentMenuToClose) {	//could make this more generic with menu to open to if UI gets more complex
+		activeTimetableItem = null;
+		currentMenuToClose.SetActive (false);
+		defaultOptionsMenu.SetActive (true);
+	}
 }
