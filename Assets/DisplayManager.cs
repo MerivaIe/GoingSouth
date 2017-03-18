@@ -27,9 +27,13 @@ public class DisplayManager : MonoBehaviour {
 			}
 
 			if (s_Instance == null) {	// If it is still null, create a new instance
-				GameObject obj = new GameObject("DisplayManager");
-				s_Instance = obj.AddComponent<DisplayManager>();
-				Debug.Log ("Could not locate a DisplayManager object so one was added to the Scene automatically.");
+				GameObject canvasGO = GameObject.Find ("Canvas");
+				if (canvasGO == null) {
+					Debug.LogWarning ("No DisplayManager could be found and neither could a Canvas to initialise and attach one to. Problems will now ensue.");
+				} else {
+					s_Instance = canvasGO.AddComponent<DisplayManager> ();
+					Debug.Log ("Could not locate the DisplayManager object so one was added to the Canvas automatically.");
+				}
 			}
 			return s_Instance;
 		}

@@ -20,8 +20,11 @@ public class Train : MonoBehaviour {
 	private float accelerationTargetX, journeyStartTime = 0f, journeyEndTime = 0f;	//journeyProgress being calculated on demand, journeyEndTime will tell things when train is available to be assigned again
 	private TimetableItem myCurrentTimetableItem;
 
+	public void Initialise() {	//custom method which will be called in GameManager's Awake() to perform actions required before Start()
+		trainSerialID = string.Format("{0:X}",this.GetHashCode ()).Substring (4);	//this is required for serial ID because DisplayManager needs this info before Trains' Start() method is called
+	}
+
 	void Start () {
-		trainSerialID = string.Format("{0:X}",this.GetHashCode ()).Substring (4);
 		rb = GetComponent <Rigidbody> ();
 		length = 20f; 				//TODO hard coded
 		animator = GetComponent <Animator>();

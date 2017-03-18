@@ -49,6 +49,9 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 			trainPool.Add(GameObject.Find ("Train (3)").GetComponent <Train>());
 			trainPool.Add(GameObject.Find ("Train (4)").GetComponent <Train>());
 			//trainPool.Add(GameObject.Find ("Complex Train (1)").GetComponent <Train>());
+			foreach (Train train in trainPool) {	//Initialise some of Trains' properties early as they are required in DisplayManager before Trains' Start() method is called
+				train.Initialise ();
+			}
 
 			platforms = GameObject.FindObjectsOfType<Platform> ().OrderBy (a => a.transform.position.z).ToList ();	//order by arrangement on z axis so that platforms can then be numbered sensibly
 			for (int i = 0; i < platforms.Count; i++) {
