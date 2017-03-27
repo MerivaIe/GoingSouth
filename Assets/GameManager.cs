@@ -12,6 +12,7 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 	public List<TimetableItem> timetable{ get; private set; }
 	public List<Train> trainPool { get; private set; }
 	public List<Material> defaultMaterialColors;
+	public List<ExhaustibleOption<Train>> testTrainPool;
 
 	private static GameManager s_Instance = null;
 
@@ -42,14 +43,25 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 		if (platforms != null || trainPool!= null || destinations!= null) {
 			Debug.LogWarning ("Another GameManager has somehow assigned to variables. There should only be one GameManager in the scene.");
 		} else {
+//			//trainPool = GameObject.FindObjectsOfType<Train> ().ToList ();	//this would eventually be Instantiating trains at level load based on user decisions
+//			trainPool = new List<Train>();
+//			trainPool.Add(GameObject.Find ("Train (1)").GetComponent <Train>());
+//			trainPool.Add(GameObject.Find ("Train (2)").GetComponent <Train>());
+//			trainPool.Add(GameObject.Find ("Train (3)").GetComponent <Train>());
+//			trainPool.Add(GameObject.Find ("Train (4)").GetComponent <Train>());
+//			//trainPool.Add(GameObject.Find ("Complex Train (1)").GetComponent <Train>());
+//			foreach (Train train in trainPool) {	//Initialise some of Trains' properties early as they are required in DisplayManager before Trains' Start() method is called
+//				train.Initialise ();
+//			}
+
 			//trainPool = GameObject.FindObjectsOfType<Train> ().ToList ();	//this would eventually be Instantiating trains at level load based on user decisions
-			trainPool = new List<Train>();
-			trainPool.Add(GameObject.Find ("Train (1)").GetComponent <Train>());
-			trainPool.Add(GameObject.Find ("Train (2)").GetComponent <Train>());
-			trainPool.Add(GameObject.Find ("Train (3)").GetComponent <Train>());
-			trainPool.Add(GameObject.Find ("Train (4)").GetComponent <Train>());
+			testTrainPool = new List<ExhaustibleOption<Train>>();
+			testTrainPool.Add(new ExhaustibleOption<Train> (GameObject.Find ("Train (1)").GetComponent <Train>()));
+			testTrainPool.Add(new ExhaustibleOption<Train> (GameObject.Find ("Train (2)").GetComponent <Train>()));
+			testTrainPool.Add(new ExhaustibleOption<Train> (GameObject.Find ("Train (3)").GetComponent <Train>()));
+			testTrainPool.Add(new ExhaustibleOption<Train> (GameObject.Find ("Train (4)").GetComponent <Train>()));
 			//trainPool.Add(GameObject.Find ("Complex Train (1)").GetComponent <Train>());
-			foreach (Train train in trainPool) {	//Initialise some of Trains' properties early as they are required in DisplayManager before Trains' Start() method is called
+			foreach (Train train in testTrainPool.Select (t=>t.option)) {	//Initialise some of Trains' properties early as they are required in DisplayManager before Trains' Start() method is called
 				train.Initialise ();
 			}
 
@@ -120,5 +132,15 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 
 	void AssignTrainToNewTimetableItem(Train train,Destination destination) {	//TODO call on train once first assigned or reassigned to destination
 		train.SetTrainColor (destination.materialColor);
+	}
+
+	public struct ExhaustibleOption<MyType> {
+		public MyType option;
+		public bool available;
+
+		public ExhaustibleOption(MyType _option) {
+			option = _option;
+			available = true;
+		}
 	}
 }

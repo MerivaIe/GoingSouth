@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Linq;
 
-public class DisplayManager : MonoBehaviour {
+public class GameUIManager : MonoBehaviour {
 
 	public GameObject timetableItemsParent;
 	public GameObject timetableItemPrefab;
@@ -18,21 +18,21 @@ public class DisplayManager : MonoBehaviour {
 	private Text clockText,creation_schedDepartureTimeText, modification_schedDepartureTimeText, modification_DestinationText;
 	private TimetableItem activeTimetableItem;	//only one timetableitem is created/modified at a time so we store a reference to it using this
 
-	private static DisplayManager s_Instance = null;
+	private static GameUIManager s_Instance = null;
 
-	public static DisplayManager instance {
+	public static GameUIManager instance {
 		get {
 			if (s_Instance == null) {	//Find GameManager in hierarchy
-				s_Instance =  FindObjectOfType<DisplayManager>();
+				s_Instance =  FindObjectOfType<GameUIManager>();
 			}
 
 			if (s_Instance == null) {	// If it is still null, create a new instance
-				GameObject canvasGO = GameObject.Find ("Canvas");
-				if (canvasGO == null) {
-					Debug.LogWarning ("No DisplayManager could be found and neither could a Canvas to initialise and attach one to. Problems will now ensue.");
+				GameObject gameUI_GO = GameObject.Find ("GameUI");
+				if (gameUI_GO == null) {
+					Debug.LogWarning ("No GameUIManager could be found and neither could a GameUI object to initialise and attach one to. Problems will now ensue.");
 				} else {
-					s_Instance = canvasGO.AddComponent<DisplayManager> ();
-					Debug.Log ("Could not locate the DisplayManager object so one was added to the Canvas automatically.");
+					s_Instance = gameUI_GO.AddComponent<GameUIManager> ();
+					Debug.Log ("Could not locate a GameUIManager so one was added to the GameUI object automatically. It will need to have some public references set in the Editor.");
 				}
 			}
 			return s_Instance;

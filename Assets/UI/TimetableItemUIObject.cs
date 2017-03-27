@@ -21,6 +21,6 @@ public class TimetableItemUIObject : MonoBehaviour {
 	}
 
 	public void OnClick_TimetableItemUIObject(){	//at the moment the only state that this can happen in is when items are in timetable list and can be modified...
-		DisplayManager.instance.OnClick_TimetableItemForModification (this);
+		GameUIManager.instance.OnClick_TimetableItemForModification (this);
 	}
 }
