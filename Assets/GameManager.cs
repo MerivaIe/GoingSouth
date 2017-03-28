@@ -49,14 +49,14 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 			trainPool.Add(GameObject.Find ("Train (3)").GetComponent <Train>());
 			trainPool.Add(GameObject.Find ("Train (4)").GetComponent <Train>());
 			//trainPool.Add(GameObject.Find ("Complex Train (1)").GetComponent <Train>());
-			foreach (Train train in trainPool.AvailableOptions) {	//Initialise some of Trains' properties early as they are required in DisplayManager before Trains' Start() method is called
+			foreach (Train train in trainPool.AllOptions) {	//Initialise some of Trains' properties early as they are required in DisplayManager before Trains' Start() method is called
 				train.Initialise ();
 			}
 
 			platforms = new ExhaustibleList<Platform> ();
 			platforms.AddRange(GameObject.FindObjectsOfType<Platform> ().OrderBy (a => a.transform.position.z).ToList ());	//order by arrangement on z axis so that platforms can then be numbered sensibly
-			for (int i = 0; i < platforms.AvailableOptions.Count; i++) {
-				platforms.AvailableOptions [i].platformNumber = i + 1;
+			for (int i = 0; i < platforms.AllOptions.Count; i++) {
+				platforms.AllOptions [i].platformNumber = i + 1;
 			}
 
 			destinations = new List<Destination> ();

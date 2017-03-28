@@ -136,19 +136,15 @@ public class GameUIManager : MonoBehaviour {
 			foreach (Train train in GameManager.instance.trainPool.AvailableOptions) {
 				dropdownOptions.Add (new Dropdown.OptionData(train.trainSerialID,trainUISprite));
 			}
-			modification_trainDropdown.AddOptions (dropdownOptions);
-			if (activeTimetableItem.train) {	//if the item selected for mods had a train already chosen previously then select it as the dropdown option
-				modification_trainDropdown.value = GameManager.instance.trainPool.AvailableOptions.IndexOf (activeTimetableItem.train);	
-			}
+			modification_trainDropdown.AddOptions (dropdownOptions);	
+			modification_trainDropdown.value = !activeTimetableItem.train? 0: GameManager.instance.trainPool.AvailableOptions.IndexOf (activeTimetableItem.train);	//if the item selected for mods had a train already chosen previously then select it as the dropdown option
 
 			if (activeTimetableItem.platform) {	//if the item selected for mods had a platform already chosen previously then restore it to available options and select it in the dropdown
 				GameManager.instance.platforms.RestoreOption (activeTimetableItem.platform);
 			}
 			modification_platformDropdown.ClearOptions ();
 			modification_platformDropdown.AddOptions (GameManager.instance.platforms.AvailableOptions.Select (a => "Platform " + a.platformNumber).ToList ());
-			if (activeTimetableItem.platform) {	//if the item selected for mods had a platform already chosen previously then select it in the dropdown
-				modification_platformDropdown.value = GameManager.instance.platforms.AvailableOptions.IndexOf (activeTimetableItem.platform);
-			}
+			modification_platformDropdown.value = !activeTimetableItem.platform? 0 : GameManager.instance.platforms.AvailableOptions.IndexOf (activeTimetableItem.platform);	//if the item selected for mods had a platform already chosen previously then select it in the dropdown
 			itemModificationMenu.SetActive (true);
 		} else {
 			Debug.LogWarning ("Player clicked a Timetable UI Item for modification but it was not found in the timetableUITracker dictionary of such items. Modification will not occur.");
@@ -189,8 +185,12 @@ public class GameUIManager : MonoBehaviour {
 		ReturnToDefaultOptionsMenu (itemModificationMenu);
 	}
 	public void OnClick_ConfirmModifiedItem() {
-		activeTimetableItem.train = GameManager.instance.trainPool.AvailableOptions [modification_trainDropdown.value];			//N.B this is premised upon the dropdown options being populated by Model lists (i.e.trains,platforms) above meaning indexes of dropdown/Model will be identical
-		activeTimetableItem.platform = GameManager.instance.platforms.AvailableOptions [modification_platformDropdown.value];
+		if (modification_trainDropdown.options.Count > 0) {		//ignore this dropdown if it didnt have anything in it
+			activeTimetableItem.train = GameManager.instance.trainPool.AvailableOptions [modification_trainDropdown.value];			//N.B this is premised upon the dropdown options being populated by Model lists (i.e.trains,platforms) above meaning indexes of dropdown/Model will be identical
+		}
+		if (modification_platformDropdown.options.Count > 0) {	//ignore this dropdown if it didnt have anything in it
+			activeTimetableItem.platform = GameManager.instance.platforms.AvailableOptions [modification_platformDropdown.value];
+		}
 		TimetableItemUIObject timetableItemUIObject;
 		timetableUITracker.TryGetValueBySecond (activeTimetableItem, out timetableItemUIObject);
 		if (activeTimetableItem.platform != null) {

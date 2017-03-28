@@ -1,14 +1,21 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using UnityEngine;
+using System.Linq;
 
 public class ExhaustibleList<MyType> {
 	private List<MyType> availableOptions = new List<MyType> ();
 	private List<MyType> exhaustedOptions = new List<MyType>();
 
-	public System.Collections.ObjectModel.ReadOnlyCollection<MyType> AvailableOptions{
+	public ReadOnlyCollection<MyType> AvailableOptions{
 		get{
 			return availableOptions.AsReadOnly ();
+		}
+	}
+	public ReadOnlyCollection<MyType> AllOptions{
+		get{
+			return availableOptions.Concat (exhaustedOptions).ToList ().AsReadOnly ();
 		}
 	}
 
