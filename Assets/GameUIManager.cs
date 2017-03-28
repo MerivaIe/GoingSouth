@@ -129,7 +129,7 @@ public class GameUIManager : MonoBehaviour {
 
 			if (activeTimetableItem.train) {	//if the item selected for mods had a train already chosen previously then restore it to available options and select it in the dropdown
 				GameManager.instance.trainPool.RestoreOption (activeTimetableItem.train);
-				modification_trainDropdown.value = GameManager.instance.trainPool.AvailableOptions.IndexOf (activeTimetableItem.train);	//N.B this is premised upon the dropdown options being populated by Model lists (i.e.trains,platforms) above meaning indexes of dropdown/Model will be identical
+				modification_trainDropdown.value = GameManager.instance.trainPool.AvailableOptions.IndexOf (activeTimetableItem.train);	
 			}
 			modification_trainDropdown.ClearOptions ();
 			modification_trainDropdown.AddOptions (GameManager.instance.trainPool.AvailableOptions.Select (a => a.trainSerialID).ToList ());
@@ -148,9 +148,6 @@ public class GameUIManager : MonoBehaviour {
 	}
 
 	//Item Creation Menu Actions
-	public void OnClick_ValueChangedDestination(int indexOfDropdown) {
-		activeTimetableItem.destination = GameManager.instance.destinations [indexOfDropdown];
-	}
 	public void OnClick_ChangeSchedDeptTime(float changeValue) {
 		activeTimetableItem.scheduledDepartureTime += changeValue;
 		creation_schedDepartureTimeText.text = ConvertGameTimeToHHMM (activeTimetableItem.scheduledDepartureTime);
@@ -159,6 +156,7 @@ public class GameUIManager : MonoBehaviour {
 		ReturnToDefaultOptionsMenu (itemCreationMenu);
 	}
 	public void OnClick_ConfirmCreatedItem() {
+		activeTimetableItem.destination = GameManager.instance.destinations [creation_destinationDropdown.value];
 		//Generate a new UI object to display the timetable item's details to the player [View]
 		GameObject timetableItemGO = Instantiate (timetableItemPrefab,timetableItemsParent.transform) as GameObject;
 		TimetableItemUIObject timetableItemUIObject = timetableItemGO.GetComponent <TimetableItemUIObject>();
@@ -172,33 +170,30 @@ public class GameUIManager : MonoBehaviour {
 	}
 
 	//Item Modification Menu Actions
-	public void OnClick_ValueChangedTrain(int indexOfDropdown) {
-		activeTimetableItem.train = GameManager.instance.trainPool.AvailableOptions [indexOfDropdown];
-	}
-	public void OnClick_ValueChangedPlatform(int indexOfDropdown) {
-		activeTimetableItem.platform = GameManager.instance.platforms.AvailableOptions [indexOfDropdown];
-	}
 	public void OnClick_CancelItemModification() {
-		if (activeTimetableItem.train) {	//remove train from list of available trains
+		//below is premised on the fact that activeTimetableItem will hold the timetable item as it was when it was first selected for modification (see OnClick_TimetableItemForModification)
+		if (activeTimetableItem.train) {	//remove previously chosen train from list of available trains
 			GameManager.instance.trainPool.ExhaustOption (activeTimetableItem.train);
 		}		
-		if (activeTimetableItem.platform) {	//likewise for platform
+		if (activeTimetableItem.platform) {	//remove previously chosen platform from list of available trains
 			GameManager.instance.platforms.ExhaustOption (activeTimetableItem.platform);
 		}
 		ReturnToDefaultOptionsMenu (itemModificationMenu);
 	}
 	public void OnClick_ConfirmModifiedItem() {
-		GameManager.instance.trainPool.ExhaustOption (activeTimetableItem.train);		//remove train from list of available trains
-		GameManager.instance.platforms.ExhaustOption (activeTimetableItem.platform);	//likewise for platform
+		activeTimetableItem.train = GameManager.instance.trainPool.AvailableOptions [modification_trainDropdown.value];			//N.B this is premised upon the dropdown options being populated by Model lists (i.e.trains,platforms) above meaning indexes of dropdown/Model will be identical
+		activeTimetableItem.platform = GameManager.instance.platforms.AvailableOptions [modification_platformDropdown.value];
+
 		TimetableItemUIObject timetableItemUIObject;
 		timetableUITracker.TryGetValueBySecond (activeTimetableItem, out timetableItemUIObject);
 		if (activeTimetableItem.platform != null) {
 			timetableItemUIObject.platformText.text = activeTimetableItem.platform.platformNumber.ToString ();
+			GameManager.instance.platforms.ExhaustOption (activeTimetableItem.platform);	//remove selected platform from list of available platforms
 		}
 		if (activeTimetableItem.train != null) {
 			timetableItemUIObject.trainText.text = activeTimetableItem.train.trainSerialID;
+			GameManager.instance.trainPool.ExhaustOption (activeTimetableItem.train);		//remove selected train from list of available trains
 		}
 		ReturnToDefaultOptionsMenu (itemModificationMenu);
 	}
-		
 }
