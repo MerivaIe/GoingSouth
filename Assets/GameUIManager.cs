@@ -191,7 +191,6 @@ public class GameUIManager : MonoBehaviour {
 	public void OnClick_ConfirmModifiedItem() {
 		activeTimetableItem.train = GameManager.instance.trainPool.AvailableOptions [modification_trainDropdown.value];			//N.B this is premised upon the dropdown options being populated by Model lists (i.e.trains,platforms) above meaning indexes of dropdown/Model will be identical
 		activeTimetableItem.platform = GameManager.instance.platforms.AvailableOptions [modification_platformDropdown.value];
-
 		TimetableItemUIObject timetableItemUIObject;
 		timetableUITracker.TryGetValueBySecond (activeTimetableItem, out timetableItemUIObject);
 		if (activeTimetableItem.platform != null) {
