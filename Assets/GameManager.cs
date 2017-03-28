@@ -7,12 +7,11 @@ using System.Linq;
 public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 	public const float minutesPerSecond = 1f;
 	public const int dayStartInMinutes = 180;
-	public List<Platform> platforms{ get; private set; }
+	public ExhaustibleList<Platform> platforms{ get; private set; }
+	public ExhaustibleList<Train> trainPool { get; private set; }
 	public List<Destination> destinations{ get; private set; }
 	public List<TimetableItem> timetable{ get; private set; }
-	public List<Train> trainPool { get; private set; }
 	public List<Material> defaultMaterialColors;
-	public List<ExhaustibleOption<Train>> testTrainPool;
 
 	private static GameManager s_Instance = null;
 
@@ -43,31 +42,21 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 		if (platforms != null || trainPool!= null || destinations!= null) {
 			Debug.LogWarning ("Another GameManager has somehow assigned to variables. There should only be one GameManager in the scene.");
 		} else {
-//			//trainPool = GameObject.FindObjectsOfType<Train> ().ToList ();	//this would eventually be Instantiating trains at level load based on user decisions
-//			trainPool = new List<Train>();
-//			trainPool.Add(GameObject.Find ("Train (1)").GetComponent <Train>());
-//			trainPool.Add(GameObject.Find ("Train (2)").GetComponent <Train>());
-//			trainPool.Add(GameObject.Find ("Train (3)").GetComponent <Train>());
-//			trainPool.Add(GameObject.Find ("Train (4)").GetComponent <Train>());
-//			//trainPool.Add(GameObject.Find ("Complex Train (1)").GetComponent <Train>());
-//			foreach (Train train in trainPool) {	//Initialise some of Trains' properties early as they are required in DisplayManager before Trains' Start() method is called
-//				train.Initialise ();
-//			}
-
 			//trainPool = GameObject.FindObjectsOfType<Train> ().ToList ();	//this would eventually be Instantiating trains at level load based on user decisions
-			testTrainPool = new List<ExhaustibleOption<Train>>();
-			testTrainPool.Add(new ExhaustibleOption<Train> (GameObject.Find ("Train (1)").GetComponent <Train>()));
-			testTrainPool.Add(new ExhaustibleOption<Train> (GameObject.Find ("Train (2)").GetComponent <Train>()));
-			testTrainPool.Add(new ExhaustibleOption<Train> (GameObject.Find ("Train (3)").GetComponent <Train>()));
-			testTrainPool.Add(new ExhaustibleOption<Train> (GameObject.Find ("Train (4)").GetComponent <Train>()));
+			trainPool = new ExhaustibleList<Train>();
+			trainPool.Add(GameObject.Find ("Train (1)").GetComponent <Train>());
+			trainPool.Add(GameObject.Find ("Train (2)").GetComponent <Train>());
+			trainPool.Add(GameObject.Find ("Train (3)").GetComponent <Train>());
+			trainPool.Add(GameObject.Find ("Train (4)").GetComponent <Train>());
 			//trainPool.Add(GameObject.Find ("Complex Train (1)").GetComponent <Train>());
-			foreach (Train train in testTrainPool.Select (t=>t.option)) {	//Initialise some of Trains' properties early as they are required in DisplayManager before Trains' Start() method is called
+			foreach (Train train in trainPool.AvailableOptions) {	//Initialise some of Trains' properties early as they are required in DisplayManager before Trains' Start() method is called
 				train.Initialise ();
 			}
 
-			platforms = GameObject.FindObjectsOfType<Platform> ().OrderBy (a => a.transform.position.z).ToList ();	//order by arrangement on z axis so that platforms can then be numbered sensibly
-			for (int i = 0; i < platforms.Count; i++) {
-				platforms [i].platformNumber = i + 1;
+			platforms = new ExhaustibleList<Platform> ();
+			platforms.AddRange(GameObject.FindObjectsOfType<Platform> ().OrderBy (a => a.transform.position.z).ToList ());	//order by arrangement on z axis so that platforms can then be numbered sensibly
+			for (int i = 0; i < platforms.AvailableOptions.Count; i++) {
+				platforms.AvailableOptions [i].platformNumber = i + 1;
 			}
 
 			destinations = new List<Destination> ();
@@ -85,23 +74,23 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 
 		//TODO configure these so that they are the correct trains going to the correct platforms
 		TimetableItem timetableItem = new TimetableItem(destinations[0],dayStartInMinutes + minutesPerSecond * 50f);
-		timetableItem.SetPlatform (platforms[0]);
-		timetableItem.SetTrain (trainPool[0]);
+		timetableItem.SetPlatform (platforms.AvailableOptions[0]);
+		timetableItem.SetTrain (trainPool.AvailableOptions[0]);
 		timetable.Add (timetableItem);
 
 		timetableItem = new TimetableItem(destinations[0],dayStartInMinutes + minutesPerSecond * 100f);
-		timetableItem.SetPlatform (platforms[1]);
-		timetableItem.SetTrain (trainPool[1]);
+		timetableItem.SetPlatform (platforms.AvailableOptions[1]);
+		timetableItem.SetTrain (trainPool.AvailableOptions[1]);
 		timetable.Add (timetableItem);
 
 		timetableItem = new TimetableItem(destinations[1],dayStartInMinutes + minutesPerSecond * 50f);
-		timetableItem.SetPlatform (platforms[2]);
-		timetableItem.SetTrain (trainPool[2]);
+		timetableItem.SetPlatform (platforms.AvailableOptions[2]);
+		timetableItem.SetTrain (trainPool.AvailableOptions[2]);
 		timetable.Add (timetableItem);
 
 		timetableItem = new TimetableItem(destinations[2],dayStartInMinutes + minutesPerSecond * 100f);
-		timetableItem.SetPlatform (platforms[3]);
-		timetableItem.SetTrain (trainPool[3]);
+		timetableItem.SetPlatform (platforms.AvailableOptions[3]);
+		timetableItem.SetTrain (trainPool.AvailableOptions[3]);
 		timetable.Add (timetableItem);
 	}
 
@@ -132,15 +121,5 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 
 	void AssignTrainToNewTimetableItem(Train train,Destination destination) {	//TODO call on train once first assigned or reassigned to destination
 		train.SetTrainColor (destination.materialColor);
-	}
-
-	public struct ExhaustibleOption<MyType> {
-		public MyType option;
-		public bool available;
-
-		public ExhaustibleOption(MyType _option) {
-			option = _option;
-			available = true;
-		}
 	}
 }
