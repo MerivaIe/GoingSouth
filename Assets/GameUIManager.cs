@@ -128,22 +128,27 @@ public class GameUIManager : MonoBehaviour {
 			modification_schedDepartureTimeText.text = ConvertGameTimeToHHMM (activeTimetableItem.scheduledDepartureTime);
 			modification_DestinationText.text = activeTimetableItem.destination.name;
 
-			if (activeTimetableItem.train) {	//if the item selected for mods had a train already chosen previously then restore it to available options and select it in the dropdown
+			if (activeTimetableItem.train) {	//if the item selected for mods had a train already chosen previously then restore it to available options
 				GameManager.instance.trainPool.RestoreOption (activeTimetableItem.train);
-				modification_trainDropdown.value = GameManager.instance.trainPool.AvailableOptions.IndexOf (activeTimetableItem.train);	
 			}
 			modification_trainDropdown.ClearOptions ();
-			modification_trainDropdown.AddOptions (GameManager.instance.trainPool.AvailableOptions.Select (a => a.trainSerialID).ToList ());
-			foreach (Dropdown.OptionData option in modification_trainDropdown.options) {
-				option.image = trainUISprite;
+			List<Dropdown.OptionData> dropdownOptions = new List<Dropdown.OptionData> ();
+			foreach (Train train in GameManager.instance.trainPool.AvailableOptions) {
+				dropdownOptions.Add (new Dropdown.OptionData(train.trainSerialID,trainUISprite));
+			}
+			modification_trainDropdown.AddOptions (dropdownOptions);
+			if (activeTimetableItem.train) {	//if the item selected for mods had a train already chosen previously then select it as the dropdown option
+				modification_trainDropdown.value = GameManager.instance.trainPool.AvailableOptions.IndexOf (activeTimetableItem.train);	
 			}
 
 			if (activeTimetableItem.platform) {	//if the item selected for mods had a platform already chosen previously then restore it to available options and select it in the dropdown
 				GameManager.instance.platforms.RestoreOption (activeTimetableItem.platform);
-				modification_platformDropdown.value = GameManager.instance.platforms.AvailableOptions.IndexOf (activeTimetableItem.platform);	
 			}
 			modification_platformDropdown.ClearOptions ();
 			modification_platformDropdown.AddOptions (GameManager.instance.platforms.AvailableOptions.Select (a => "Platform " + a.platformNumber).ToList ());
+			if (activeTimetableItem.platform) {	//if the item selected for mods had a platform already chosen previously then select it in the dropdown
+				modification_platformDropdown.value = GameManager.instance.platforms.AvailableOptions.IndexOf (activeTimetableItem.platform);
+			}
 			itemModificationMenu.SetActive (true);
 		} else {
 			Debug.LogWarning ("Player clicked a Timetable UI Item for modification but it was not found in the timetableUITracker dictionary of such items. Modification will not occur.");
