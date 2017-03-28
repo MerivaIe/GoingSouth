@@ -10,6 +10,7 @@ public class GameUIManager : MonoBehaviour {
 	public GameObject timetableItemPrefab;
 	[Range(0.02f,1f)]
 	public float displayUpdateInterval = 0.5f;
+	public Sprite trainUISprite;
 
 	private BiLookup<TimetableItemUIObject,TimetableItem> timetableUITracker;
 	private Dictionary<Slider,Train> trainUITracker;								//stored in a dic in case we need to use lookup in future, atm though it is only used in a full foreach loop over this dic to update sliders
@@ -133,6 +134,9 @@ public class GameUIManager : MonoBehaviour {
 			}
 			modification_trainDropdown.ClearOptions ();
 			modification_trainDropdown.AddOptions (GameManager.instance.trainPool.AvailableOptions.Select (a => a.trainSerialID).ToList ());
+			foreach (Dropdown.OptionData option in modification_trainDropdown.options) {
+				option.image = trainUISprite;
+			}
 
 			if (activeTimetableItem.platform) {	//if the item selected for mods had a platform already chosen previously then restore it to available options and select it in the dropdown
 				GameManager.instance.platforms.RestoreOption (activeTimetableItem.platform);
@@ -140,7 +144,6 @@ public class GameUIManager : MonoBehaviour {
 			}
 			modification_platformDropdown.ClearOptions ();
 			modification_platformDropdown.AddOptions (GameManager.instance.platforms.AvailableOptions.Select (a => "Platform " + a.platformNumber).ToList ());
-
 			itemModificationMenu.SetActive (true);
 		} else {
 			Debug.LogWarning ("Player clicked a Timetable UI Item for modification but it was not found in the timetableUITracker dictionary of such items. Modification will not occur.");
