@@ -160,7 +160,7 @@ public class GameUIManager : MonoBehaviour {
 		ReturnToDefaultOptionsMenu (itemCreationMenu);
 	}
 	public void OnClick_ConfirmCreatedItem() {
-		activeTimetableItem.destination = GameManager.instance.destinations [creation_destinationDropdown.value];
+		GameManager.instance.AssignDestinationToTimetableItem (creation_destinationDropdown.value, activeTimetableItem);
 		//Generate a new UI object to display the timetable item's details to the player [View]
 		GameObject timetableItemGO = Instantiate (timetableItemPrefab,timetableItemsParent.transform) as GameObject;
 		TimetableItemUIObject timetableItemUIObject = timetableItemGO.GetComponent <TimetableItemUIObject>();

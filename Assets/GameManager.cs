@@ -128,4 +128,8 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 		timetableItem.platform = platforms.AvailableOptions [platformIndex];
 		platforms.ExhaustOption (timetableItem.platform);
 	}
+
+	public void AssignDestinationToTimetableItem(int destinationIndex, TimetableItem timetableItem) {
+		timetableItem.destination = destinations [destinationIndex];
+	}
 }
