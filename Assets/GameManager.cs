@@ -116,10 +116,16 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 		TimetableItem newTimetableItem = new TimetableItem (destination, scheduledDepartureTime);
 		timetable.Add (newTimetableItem);
 		return newTimetableItem;
-		//TODO: do we need to send message back to calling (e.g. to DisplayManager)? ALSO should timetable item dislay have a reference to timetableitem model or should this be done some other way
 	}
 
-	void AssignTrainToNewTimetableItem(Train train,Destination destination) {	//TODO call on train once first assigned or reassigned to destination
-		train.SetTrainColor (destination.materialColor);
+	public void AssignTrainToTimetableItem(int trainIndex, TimetableItem timetableItem) {
+		timetableItem.train = trainPool.AvailableOptions [trainIndex];
+		trainPool.ExhaustOption (timetableItem.train);
+		//TODO: also let the train know it has been chosen.. it shoud then set its color etc. train.SetTrainColor (timetableItem.destination.materialColor);
+	}
+
+	public void AssignPlatformToTimetableItem(int platformIndex, TimetableItem timetableItem) {
+		timetableItem.platform = platforms.AvailableOptions [platformIndex];
+		platforms.ExhaustOption (timetableItem.platform);
 	}
 }

@@ -13,7 +13,7 @@ public class GameUIManager : MonoBehaviour {
 	public Sprite trainUISprite;
 
 	private BiLookup<TimetableItemUIObject,TimetableItem> timetableUITracker;
-	private Dictionary<Slider,Train> trainUITracker;								//stored in a dic in case we need to use lookup in future, atm though it is only used in a full foreach loop over this dic to update sliders
+	private Dictionary<Slider,Train> trainUITracker;	//stored in a dic in case we need to use lookup in future, atm though it is only used in a full foreach loop over this dic to update sliders
 	private GameObject defaultOptionsMenu, itemCreationMenu, itemModificationMenu;
 	private Dropdown creation_destinationDropdown, modification_trainDropdown, modification_platformDropdown;
 	private Text clockText,creation_schedDepartureTimeText, modification_schedDepartureTimeText, modification_DestinationText;
@@ -186,20 +186,18 @@ public class GameUIManager : MonoBehaviour {
 	}
 	public void OnClick_ConfirmModifiedItem() {
 		if (modification_trainDropdown.options.Count > 0) {		//ignore this dropdown if it didnt have anything in it
-			activeTimetableItem.train = GameManager.instance.trainPool.AvailableOptions [modification_trainDropdown.value];			//Reference the train selected by player N.B this is premised upon the dropdown options being populated by Model lists (i.e.trains,platforms) above meaning indexes of dropdown/Model will be identical
+			GameManager.instance.AssignTrainToTimetableItem (modification_trainDropdown.value,activeTimetableItem);	//Reference the train selected by player N.B this is premised upon the dropdown options being populated by Model lists (i.e.trains,platforms) above meaning indexes of dropdown/Model will be identical
 		}
 		if (modification_platformDropdown.options.Count > 0) {	//ignore this dropdown if it didnt have anything in it
-			activeTimetableItem.platform = GameManager.instance.platforms.AvailableOptions [modification_platformDropdown.value];	//Reference the platform selected by player N.B this is premised upon the dropdown options being populated by Model lists (i.e.trains,platforms) above meaning indexes of dropdown/Model will be identical
+			GameManager.instance.AssignPlatformToTimetableItem (modification_platformDropdown.value,activeTimetableItem);	//Reference the platform selected by player N.B this is premised upon the dropdown options being populated by Model lists (i.e.trains,platforms) above meaning indexes of dropdown/Model will be identical
 		}
 		TimetableItemUIObject timetableItemUIObject;
 		timetableUITracker.TryGetValueBySecond (activeTimetableItem, out timetableItemUIObject);
 		if (activeTimetableItem.platform != null) {	//if a platform was selected by the player (
 			timetableItemUIObject.platformText.text = activeTimetableItem.platform.platformNumber.ToString ();
-			GameManager.instance.platforms.ExhaustOption (activeTimetableItem.platform);	//remove selected platform from list of available platforms
 		}
 		if (activeTimetableItem.train != null) {	//if a train was selected by the player
 			timetableItemUIObject.trainText.text = activeTimetableItem.train.trainSerialID;
-			GameManager.instance.trainPool.ExhaustOption (activeTimetableItem.train);		//remove selected train from list of available trains
 		}
 		ReturnToDefaultOptionsMenu (itemModificationMenu);
 	}
