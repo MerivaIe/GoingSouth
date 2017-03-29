@@ -87,7 +87,7 @@ public class GameUIManager : MonoBehaviour {
 	GameObject MyFindUIObjectWithTag(string searchForTag) {
 		GameObject foundGameObject = GameObject.FindGameObjectWithTag (searchForTag);
 		if (foundGameObject == null) {
-			Debug.LogWarning ("Could not find UI game object with tag: " + searchForTag + ". Display will not function as expected.");
+			Debug.LogWarning ("Could not find UI game object with tag: " + searchForTag + ". Display will not function as expected. Ensure all UI objects are active at game start.");
 		}
 		return foundGameObject;
 	}
@@ -186,18 +186,18 @@ public class GameUIManager : MonoBehaviour {
 	}
 	public void OnClick_ConfirmModifiedItem() {
 		if (modification_trainDropdown.options.Count > 0) {		//ignore this dropdown if it didnt have anything in it
-			activeTimetableItem.train = GameManager.instance.trainPool.AvailableOptions [modification_trainDropdown.value];			//N.B this is premised upon the dropdown options being populated by Model lists (i.e.trains,platforms) above meaning indexes of dropdown/Model will be identical
+			activeTimetableItem.train = GameManager.instance.trainPool.AvailableOptions [modification_trainDropdown.value];			//Reference the train selected by player N.B this is premised upon the dropdown options being populated by Model lists (i.e.trains,platforms) above meaning indexes of dropdown/Model will be identical
 		}
 		if (modification_platformDropdown.options.Count > 0) {	//ignore this dropdown if it didnt have anything in it
-			activeTimetableItem.platform = GameManager.instance.platforms.AvailableOptions [modification_platformDropdown.value];
+			activeTimetableItem.platform = GameManager.instance.platforms.AvailableOptions [modification_platformDropdown.value];	//Reference the platform selected by player N.B this is premised upon the dropdown options being populated by Model lists (i.e.trains,platforms) above meaning indexes of dropdown/Model will be identical
 		}
 		TimetableItemUIObject timetableItemUIObject;
 		timetableUITracker.TryGetValueBySecond (activeTimetableItem, out timetableItemUIObject);
-		if (activeTimetableItem.platform != null) {
+		if (activeTimetableItem.platform != null) {	//if a platform was selected by the player (
 			timetableItemUIObject.platformText.text = activeTimetableItem.platform.platformNumber.ToString ();
 			GameManager.instance.platforms.ExhaustOption (activeTimetableItem.platform);	//remove selected platform from list of available platforms
 		}
-		if (activeTimetableItem.train != null) {
+		if (activeTimetableItem.train != null) {	//if a train was selected by the player
 			timetableItemUIObject.trainText.text = activeTimetableItem.train.trainSerialID;
 			GameManager.instance.trainPool.ExhaustOption (activeTimetableItem.train);		//remove selected train from list of available trains
 		}
