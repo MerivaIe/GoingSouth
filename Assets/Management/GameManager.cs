@@ -10,10 +10,16 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 	public ExhaustibleList<Platform> platforms{ get; private set; }
 	public ExhaustibleList<Train> trainPool { get; private set; }
 	public List<Destination> destinations{ get; private set; }
+	public ExhaustibleList<Vector3> trainDockingPoints { get; private set; }
 	public List<TimetableItem> timetable{ get; private set; }
 	public List<Material> defaultMaterialColors;
+	public int trainCount = 4;
+	public GameObject trainPrefab;
+	public float destructionInterval = 0.05f;
+	public Collider outOfStationTrigger { get; private set; }
 
 	private static GameManager s_Instance = null;
+	private List<GameObject> destructionQueue;
 
 	public static GameManager instance {
 		get {
@@ -35,28 +41,40 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 	}
 
 	void Awake () {
-		if (defaultMaterialColors.Count == 0) {
-			Debug.LogWarning ("No materials assigned to default color array in GameManager. Please do so.");
+		destructionQueue = new List<GameObject> ();
+
+		foreach (Signal signal in GameObject.FindObjectsOfType <Signal>()) {
+			if (signal.signalType == Signal.SignalType.OutOfStation) {
+				outOfStationTrigger = signal.gameObject.GetComponent <BoxCollider> ();
+				break;
+			}
 		}
+		if (!outOfStationTrigger) {Debug.LogWarning ("Out of station trigger not found. Please add one to the scene.");}
+
+		if (defaultMaterialColors.Count == 0) {Debug.LogWarning ("No materials assigned to default color array in GameManager. Please do so.");}
 
 		if (platforms != null || trainPool!= null || destinations!= null) {
 			Debug.LogWarning ("Another GameManager has somehow assigned to variables. There should only be one GameManager in the scene.");
 		} else {
-			//trainPool = GameObject.FindObjectsOfType<Train> ().ToList ();	//this would eventually be Instantiating trains at level load based on user decisions
-			trainPool = new ExhaustibleList<Train>();
-			trainPool.Add(GameObject.Find ("Train (1)").GetComponent <Train>());
-			trainPool.Add(GameObject.Find ("Train (2)").GetComponent <Train>());
-			trainPool.Add(GameObject.Find ("Train (3)").GetComponent <Train>());
-			trainPool.Add(GameObject.Find ("Train (4)").GetComponent <Train>());
-			//trainPool.Add(GameObject.Find ("Complex Train (1)").GetComponent <Train>());
-			foreach (Train train in trainPool.AllOptions) {	//Initialise some of Trains' properties early as they are required in DisplayManager before Trains' Start() method is called
-				train.Initialise ();
-			}
-
 			platforms = new ExhaustibleList<Platform> ();
 			platforms.AddRange(GameObject.FindObjectsOfType<Platform> ().OrderBy (a => a.transform.position.z).ToList ());	//order by arrangement on z axis so that platforms can then be numbered sensibly
 			for (int i = 0; i < platforms.AllOptions.Count; i++) {
 				platforms.AllOptions [i].platformNumber = i + 1;
+			}
+
+			trainPool = new ExhaustibleList<Train>();
+			trainDockingPoints = new ExhaustibleList<Vector3> ();
+			Vector3 trainDockingPoint;
+			trainDockingPoint.x = -75f;
+			trainDockingPoint.y = 1.56f;
+			trainDockingPoint.z = 20f;
+			for (int i = 0; i < trainCount; i++) {
+				trainDockingPoint.z += 5f;	//position trains along the z axis... when they are called into service/ journey time is complete just need to change z position to that of the platform's signal trigger and then go
+				GameObject trainGO = Instantiate (trainPrefab,trainDockingPoint,Quaternion.identity) as GameObject;
+				Train train = trainGO.GetComponent <Train> ();
+				train.Initialise ();	//Initialise some of Trains' properties early as they are required in DisplayManager before Trains' Start() method is called
+				trainDockingPoints.Add (trainDockingPoint);
+				trainPool.Add (train);
 			}
 
 			destinations = new List<Destination> ();
@@ -121,7 +139,6 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 	public void AssignTrainToTimetableItem(int trainIndex, TimetableItem timetableItem) {
 		timetableItem.train = trainPool.AvailableOptions [trainIndex];
 		trainPool.ExhaustOption (timetableItem.train);
-		//TODO: also let the train know it has been chosen.. it shoud then set its color etc. train.SetTrainColor (timetableItem.destination.materialColor);
 	}
 
 	public void AssignPlatformToTimetableItem(int platformIndex, TimetableItem timetableItem) {
@@ -131,5 +148,20 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 
 	public void AssignDestinationToTimetableItem(int destinationIndex, TimetableItem timetableItem) {
 		timetableItem.destination = destinations [destinationIndex];
+	}
+
+	public void AddObjectsToDeletionQueue(List<GameObject> gameObjectToDelete) {
+		destructionQueue.AddRange (gameObjectToDelete);
+		if (!IsInvoking ("DestroyObjectsInQueue")) {
+			InvokeRepeating ("DestroyObjectsInQueue", 0f, destructionInterval);
+		}
+	}
+
+	void DestroyObjectsInQueue() {
+		if (destructionQueue.Count >= 0) {
+			CancelInvoke ();
+		} else {
+			GameObject.Destroy (destructionQueue[0]);
+		}
 	}
 }

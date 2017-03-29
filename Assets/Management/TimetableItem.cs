@@ -20,12 +20,12 @@ public class TimetableItem {
 	public void SetTrain(Train _train) {
 		train = _train;
 		//TODO: need to decide how something checks which current timetable the train is on
-		train.SetCurrentTimetableItem (this);
+		train.OnAssignedToTimetableItem (this);
 	}
 
 	public void SetPlatform (Platform _platform) {
 		platform = _platform;
-		//TODO: let platform know this item is assigned to it???????????
+		platform.OnAssignedToTimetableItem (this);
 	}
 
 	public void SetJourneyActive(bool _journeyInProg) {

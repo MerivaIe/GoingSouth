@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class Signal : MonoBehaviour {
 
-	public enum SignalType {Brake,Accelerate}
+	public enum SignalType {Brake,Accelerate,OutOfStation}
 
 	public SignalType signalType;
 

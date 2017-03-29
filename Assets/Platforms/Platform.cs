@@ -54,6 +54,10 @@ public class Platform : MonoBehaviour {
 		}
 	}
 		
+	public void OnAssignedToTimetableItem(TimetableItem timetableItem) {
+		//TODO change colour of text being displayed and also the name of destination
+	}
+
 	private class WaitLocation {
 		public Vector3 position;
 		public Person person;

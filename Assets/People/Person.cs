@@ -24,7 +24,6 @@ public class Person : MonoBehaviour {
 	private NavMeshObstacle nmObstacle;
 	private Rigidbody rb;
 	private Vector3 platformTarget, trainTarget, toPlatformTarget;
-	private static GameObject organisingParent;
 	private static float[] proximityAngles;
 	private float nextCheckTime = 0f;
 	private bool boardUsingForce = false, atPlatformTarget = false;
@@ -34,7 +33,11 @@ public class Person : MonoBehaviour {
 		nmAgent = GetComponent <NavMeshAgent>();
 		nmObstacle = GetComponent <NavMeshObstacle> ();
 		nmAgent.speed = Random.Range(2f,5f);
-		rb.centerOfMass = new Vector3(0f,centreOfMassYOffset,0f);
+
+		Vector3 newCentreOfMass = rb.centerOfMass;
+		newCentreOfMass.y = centreOfMassYOffset;
+		rb.centerOfMass = newCentreOfMass;
+
 		toPlatformTarget.y = 0f;	//we will only ever modify the xz
 		insideTrain = false;
 		if (testMode) {
@@ -49,7 +52,7 @@ public class Person : MonoBehaviour {
 		}
 	}
 
-	// Found out that you can use rb.SweepTest() to do pretty much this same thing. This might be slightly more efficient though so will leave it
+	// Found out that you can use rb.SweepTest() to do pretty much this same thing. Some suggest custom raycasting slightly more efficient though so will leave it
 	void GenerateFanAngles (int directionCount, int fanAngleInDegrees)
 	{
 		proximityAngles = new float[directionCount];
@@ -96,19 +99,7 @@ public class Person : MonoBehaviour {
 				status = PersonStatus.ReadyToBoard;
 			}
 			if (status == PersonStatus.ReadyToBoard) {
-//				if (Time.time > nextCheckTime) {
-//					toPlatformTarget = platformTarget - transform.position;
-//					toPlatformTarget.y = 0f;
-//					atPlatformTarget = toPlatformTarget.sqrMagnitude < 0.01f;	//<0.1^2
-//					nextCheckTime = Time.time + checkingInterval;
-//					if (atPlatformTarget && nmAgent.enabled) {	//if under agent control and close to target: turn off agent
-//						SetAgentControl (false);
-//					}
-//				}
-//				if (!atPlatformTarget && !nmAgent.enabled) {	//else under physics control and not close: nudge towards target
-//					rb.AddForce (toPlatformTarget.normalized * nudgeForce, ForceMode.Acceleration);
-//				}
-
+				// could add an interval to this check if this is too heavy on performance (i.e. 'if (Time.time > nextCheckTime) {')
 				toPlatformTarget.x = platformTarget.x - transform.position.x;
 				toPlatformTarget.z = platformTarget.z - transform.position.z;
 				atPlatformTarget = toPlatformTarget.sqrMagnitude < 0.01f;	//<0.1^2
@@ -196,7 +187,7 @@ public class Person : MonoBehaviour {
 		}
 	}
 
-	public void OnTrainLeaveStation() {
+	public void OnTrainDeparture() {
 		Component.Destroy (rb);
 		transform.parent = currentPlatform.incomingTrain.transform;
 		status = PersonStatus.SatDown;

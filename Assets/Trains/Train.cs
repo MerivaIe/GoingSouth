@@ -5,13 +5,12 @@ using System.Linq;
 
 public class Train : MonoBehaviour {
 
-	public float speed = 40f, boardingDuration = 10f, accelerationModifier = 4f;
-	public enum TrainStatus {EnteringStation,Braking,BoardingTime,Accelerating,LeavingStation,Idle}
+	public float speed = 40f, boardingDuration = 10f;
+	public enum TrainStatus {Arriving,Braking,BoardingTime,Departing,Parked,Idle}
 	public TrainStatus status;
 	public Vector3 direction;	//this should eventually be replaced with just transform.forward everywhere
 	public Material materialColor;
 	public SphereCollider[] doors {get; private set;}	//has to be collider so that transform is queried once train reaches platform
-	public float length { get; private set; }
 	public string trainSerialID { get; private set; }
 
 	private Rigidbody rb;
@@ -26,16 +25,15 @@ public class Train : MonoBehaviour {
 
 	void Start () {
 		rb = GetComponent <Rigidbody> ();
-		length = 20f; 				//TODO hard coded
 		animator = GetComponent <Animator>();
-		status = TrainStatus.Idle;
+		status = TrainStatus.Parked;
 
 		doors = GetComponentsInChildren <SphereCollider>().ToArray ();
 
 		if (transform.position.x < -50f) {	//temp code to start trains
 			direction = Vector3.right;
 			rb.velocity = direction * speed;
-			status = TrainStatus.EnteringStation;
+			status = TrainStatus.Arriving;
 		}
 	}
 
@@ -52,12 +50,8 @@ public class Train : MonoBehaviour {
 				Mathf.SmoothDamp (transform.position.x,accelerationTargetX,ref newVelocity.x,2f,speed,Time.fixedDeltaTime);
 			}
 			break;
-		case TrainStatus.Accelerating:
-			if (rb.velocity.x >= speed) {
-				status = TrainStatus.LeavingStation;
-			} else {
-				Mathf.SmoothDamp (transform.position.x, accelerationTargetX, ref newVelocity.x,2f,speed,Time.fixedDeltaTime);
-			}
+		case TrainStatus.Departing:
+			Mathf.SmoothDamp (transform.position.x, accelerationTargetX, ref newVelocity.x,2f,speed,Time.fixedDeltaTime);
 			break;
 		}
 		if (rb.velocity != newVelocity) {rb.velocity = newVelocity;}
@@ -70,8 +64,8 @@ public class Train : MonoBehaviour {
 	}
 
 	void SetAccelerating() {
-		accelerationTargetX = transform.position.x + direction.x * accelerationModifier * length;	//e.g. reach top speed 4 train lengths away
-		status = TrainStatus.Accelerating;
+		accelerationTargetX = GameManager.instance.outOfStationTrigger.bounds.center.x;
+		status = TrainStatus.Departing;
 	}
 
 	#region Platform Sequence
@@ -111,7 +105,7 @@ public class Train : MonoBehaviour {
 
 	void HandlePeopleOnboard() {
 		foreach (Person person in peopleOnBoard) {
-			person.OnTrainLeaveStation ();
+			person.OnTrainDeparture ();
 		}
 	}
 
@@ -138,11 +132,14 @@ public class Train : MonoBehaviour {
 	public void SetTrainColor(Material _materialColor) {
 		materialColor = _materialColor;
 		foreach (MeshRenderer meshRenderer in GetComponentsInChildren <MeshRenderer>()) {	//set all external faces of train to this color
-			//TODO: for each meshrenderer in scene set its material = color (use shared material = materialColor)
+			if (meshRenderer.sharedMaterial.name.Substring (0, 13) == "TrainExternal") {
+				meshRenderer.sharedMaterial = materialColor;
+			}
 		}
 	}
-	public void SetCurrentTimetableItem(TimetableItem timetableItem) {
+	public void OnAssignedToTimetableItem(TimetableItem timetableItem) {
 		myCurrentTimetableItem = timetableItem;
+		SetTrainColor (myCurrentTimetableItem.destination.materialColor);
 	}
 
 	public float GetJourneyProgress() {	//return 0-1 for slider value
@@ -151,6 +148,17 @@ public class Train : MonoBehaviour {
 		} else {
 			float journeyProgress = (Time.time - journeyStartTime) / (journeyEndTime - journeyStartTime);	//note that this is both outbound and inbound
 			return (1f-Mathf.Abs (2f*journeyProgress - 1));	//this handles outbound progress and inbound progress (just test some values of journeyProgress to understand it (e.g. 0.1, 0.8, 1.3)
+		}
+	}
+
+	public void OnEnterOutOfStationTrigger() {	//reset most things apart from journey time etc.
+		if (status == TrainStatus.Departing) {
+			GameManager.instance.AddObjectsToDeletionQueue (peopleOnBoard.Select (p => p.gameObject).ToList ());
+			peopleOnBoard.Clear ();
+			status = TrainStatus.Parked;
+			rb.velocity = Vector3.zero;
+			transform.position = GameManager.instance.trainDockingPoints.AvailableOptions [0];
+			GameManager.instance.trainDockingPoints.ExhaustOption (0);
 		}
 	}
 
