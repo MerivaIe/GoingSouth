@@ -203,4 +203,13 @@ public class GameUIManager : MonoBehaviour {
 		}
 		ReturnToDefaultOptionsMenu (itemModificationMenu);
 	}
+	public void OnClick_WipeModifiedItem() {
+		TimetableItemUIObject timetableItemUIObject;
+		timetableUITracker.TryGetValueBySecond (activeTimetableItem, out timetableItemUIObject);
+		activeTimetableItem.platform = null;
+		timetableItemUIObject.platformText.text = "";
+		activeTimetableItem.train = null;
+		timetableItemUIObject.trainText.text = "";
+		ReturnToDefaultOptionsMenu (itemModificationMenu);
+	}
 }

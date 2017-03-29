@@ -41,7 +41,7 @@ public class ExhaustibleList<MyType> {
 			availableOptions.Add (item);
 			exhaustedOptions.Remove (item);
 		} else {
-			Debug.LogWarning ("Caller was attempting to exhaust an option that was not available.");
+			Debug.LogWarning ("Caller was attempting to restore an option that was not available.");
 		}
 	}
 }
