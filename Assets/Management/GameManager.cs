@@ -65,7 +65,7 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 			trainPool = new ExhaustibleList<Train>();
 			trainDockingPoints = new ExhaustibleList<Vector3> ();
 			Vector3 trainDockingPoint;
-			trainDockingPoint.x = -75f;
+			trainDockingPoint.x = outOfStationTrigger.bounds.center.x;
 			trainDockingPoint.y = 1.56f;
 			trainDockingPoint.z = 20f;
 			for (int i = 0; i < trainCount; i++) {

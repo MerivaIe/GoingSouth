@@ -29,12 +29,6 @@ public class Train : MonoBehaviour {
 		status = TrainStatus.Parked;
 
 		doors = GetComponentsInChildren <SphereCollider>().ToArray ();
-
-		if (transform.position.x < -50f) {	//temp code to start trains
-			direction = Vector3.right;
-			rb.velocity = direction * speed;
-			status = TrainStatus.Arriving;
-		}
 	}
 
 	void FixedUpdate () {
@@ -132,7 +126,7 @@ public class Train : MonoBehaviour {
 	public void SetTrainColor(Material _materialColor) {
 		materialColor = _materialColor;
 		foreach (MeshRenderer meshRenderer in GetComponentsInChildren <MeshRenderer>()) {	//set all external faces of train to this color
-			if (meshRenderer.sharedMaterial.name.Substring (0, 13) == "TrainExternal") {
+			if (meshRenderer.sharedMaterial.name.Length >= 13 && meshRenderer.sharedMaterial.name.Substring (0, 13) == "TrainExternal") {
 				meshRenderer.sharedMaterial = materialColor;
 			}
 		}
@@ -160,6 +154,13 @@ public class Train : MonoBehaviour {
 			transform.position = GameManager.instance.trainDockingPoints.AvailableOptions [0];
 			GameManager.instance.trainDockingPoints.ExhaustOption (0);
 		}
+	}
+
+	public void LeaveDockAndEnterStation() {
+		//TODO set transform = platform signal trigger
+		direction = Vector3.right;
+		rb.velocity = direction * speed;
+		status = TrainStatus.Arriving;
 	}
 
 	void OnDrawGizmos() {
