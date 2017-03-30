@@ -10,7 +10,7 @@ public class Platform : MonoBehaviour {
 	public float nmAgentRadius = 0.5f;
 	public float waitSpacing = 1f;
 	public int platformNumber;
-	public Train incomingTrain { get; private set; }
+	//public Train incomingTrain { get; private set; }
 	public Bounds platformSignalBounds { get; private set; }
 
 	private List<WaitLocation> waitLocations = new List<WaitLocation> ();
@@ -19,7 +19,6 @@ public class Platform : MonoBehaviour {
 	void Start () {
 		platformTriggerBounds = GetComponentInChildren<PlatformTrigger>().gameObject.GetComponent <BoxCollider>().bounds;
 		platformSignalBounds = GetComponentInChildren<Signal> ().gameObject.GetComponent <BoxCollider> ().bounds;
-		incomingTrain = GameManager.instance.GetNextTrain (this);
 
 		CalculateNewWaitLocations ();
 	}

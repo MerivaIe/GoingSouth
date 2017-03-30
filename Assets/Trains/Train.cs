@@ -125,6 +125,8 @@ public class Train : MonoBehaviour {
 			status = TrainStatus.Arriving;
 			journeyStartTime = 0f;
 			journeyEndTime = 0f;
+
+			//TODO lock down the timetable UI item
 		}
 	}
 

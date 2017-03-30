@@ -4,19 +4,18 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 using System.Linq;
+using MoreLinq;
 
 [RequireComponent(typeof(NavMeshAgent))]
 public class Person : MonoBehaviour {
 
-	public bool testMode = false;
 	public bool insideTrain {get; private set;}
 	/// <summary>
 	/// PersonStatus: MovingToPlatform=nmAgent control to centre of platform | WrongPlatform=nmAgent control to waiting area | MovingToDoor=nmAgent control to one door location | Boarding=physics control avoidance of others
 	/// </summary>
 	public enum PersonStatus{MovingToPlatform,MovingToFoyer,ReadyToBoard,MovingToTrainDoor,BoardingTrain,FindingSeat,SatDown,Alighted,Compromised}
 	public PersonStatus status; 
-	public Destination destination{ get; private set; }
-	public Platform currentPlatform;
+	public Destination desiredDestination{ get; private set; }
 	public float boardingForce = 20f, nudgeForce = 1f, checkingInterval = 0.5f,proximityDistance = 0.5f, centreOfMassYOffset = 0f;
 	public static float sqrTargetThreshold = 4f;
 
@@ -27,6 +26,7 @@ public class Person : MonoBehaviour {
 	private static float[] proximityAngles;
 	private float nextCheckTime = 0f;
 	private bool boardUsingForce = false, atPlatformTarget = false;
+	private TimetableItem myCurrentTimetableItem;
 
 	void Awake () {	//needs to be Awake because Start() is not called before methods on instantiated gameObject it seems
 		rb = GetComponent <Rigidbody> ();
@@ -40,16 +40,11 @@ public class Person : MonoBehaviour {
 
 		toPlatformTarget.y = 0f;	//we will only ever modify the xz
 		insideTrain = false;
-		if (testMode) {
-			try {
-				nmAgent.SetDestination(currentPlatform.transform.position);
-			} catch {
-				SetAgentControl (false);
-			}
-		}
 		if (proximityAngles == null) {
 			GenerateFanAngles (5,90);
 		}
+
+		InvokeRepeating ("CheckForTimetableChange",0,checkingInterval * 10f);
 	}
 
 	// Found out that you can use rb.SweepTest() to do pretty much this same thing. Some suggest custom raycasting slightly more efficient though so will leave it
@@ -63,50 +58,60 @@ public class Person : MonoBehaviour {
 		}
 	}
 
+	void CheckForTimetableChange() {
+		//need to decide whether this should have logic behind it... i.e. if it changes then should we do something specific, or should it jsut be set
+		myCurrentTimetableItem = GameManager.instance.timetable.Where(t => t.destination == desiredDestination).MinBy (t => t.scheduledDepartureTime);
+		//TODO separate this out... if none returend by Where then does it read null? then dont need to do the MinBy
+		//maybe a check here if null?
+	}
+
 	//might be better to actually do all of this on a switch(on status) at the base level actually- it is getting hard to read
 	void FixedUpdate() {
-		if (status == PersonStatus.MovingToPlatform || status == PersonStatus.Compromised || status == PersonStatus.SatDown) {return;}	//could this be made quicker using bitwise operations on enum flags?
-		if (!currentPlatform.incomingTrain) {return;}
-
-		if (currentPlatform.incomingTrain.status == Train.TrainStatus.BoardingTime) {
-			if (status == PersonStatus.FindingSeat) {
-				if (rb.mass == 10f && Vector3.Angle (transform.up, Vector3.up) < 30f) {	//if this is a light person and they are standing then add up force for crowd surfing
-					rb.AddForce (Vector3.up, ForceMode.Acceleration);
+		if (myCurrentTimetableItem == null || myCurrentTimetableItem.train == null) {return;}
+		//only the four following statuses need to be handled in fixed update...
+		if (status == PersonStatus.FindingSeat || status == PersonStatus.ReadyToBoard || status == PersonStatus.MovingToTrainDoor || status == PersonStatus.BoardingTrain) {
+			if (myCurrentTimetableItem.train.status == Train.TrainStatus.BoardingTime) {
+				if (status == PersonStatus.FindingSeat) {
+					if (rb.mass == 10f && Vector3.Angle (transform.up, Vector3.up) < 30f) {	//if this is a light person and they are standing then add up force for crowd surfing
+						rb.AddForce (Vector3.up, ForceMode.Acceleration);
+					}
+					return;
 				}
-				return;
-			}
-			//this will execute just once if train is at station to ready person: could be done in a one off method called by either train at arrival time or platform if someone arrives and train is here... increases complexity of model but performance would likely improve
-			if (status == PersonStatus.ReadyToBoard) {
-				SetAgentControl (false);
-				SetDoorTarget ();
-				transform.LookAt (trainTarget);	//maybe look at random target? or smoother
-				status = PersonStatus.MovingToTrainDoor;
-			}
-			//handle boarding situations (getting to door using force/velocity, getting into train using force)
-			Vector3 boardingVector = trainTarget - transform.position;
-			boardingVector.y = 0f;
-			if (status == PersonStatus.MovingToTrainDoor && Time.time > nextCheckTime) {
-				boardUsingForce = !IsDirectionClear (boardingVector.normalized);	//check proximity periodically to set boarding by velocity or by force
-				nextCheckTime = Time.time + checkingInterval;
-			}
-			if (status == PersonStatus.BoardingTrain || boardUsingForce) {
-				MoveUsingForce (boardingVector);
-			} else {
-				rb.velocity = nmAgent.speed * boardingVector.normalized;
-			}
-		} else { //catches all other train statuses
-			if (status == PersonStatus.MovingToTrainDoor || status == PersonStatus.BoardingTrain) {	//pick up anyone who failed to board train
-				status = PersonStatus.ReadyToBoard;
-			}
-			if (status == PersonStatus.ReadyToBoard) {
-				// could add an interval to this check if this is too heavy on performance (i.e. 'if (Time.time > nextCheckTime) {')
-				toPlatformTarget.x = platformTarget.x - transform.position.x;
-				toPlatformTarget.z = platformTarget.z - transform.position.z;
-				atPlatformTarget = toPlatformTarget.sqrMagnitude < 0.01f;	//<0.1^2
-				if (atPlatformTarget && nmAgent.enabled) {			//if under agent control and close to target: turn off agent
+				//this will execute just once if train is at station to ready person: could be done in a one off method called by either train at arrival time or platform if someone arrives and train is here... increases complexity of model but performance would likely improve
+				if (status == PersonStatus.ReadyToBoard) {
 					SetAgentControl (false);
-				} else if (!atPlatformTarget && !nmAgent.enabled) {	//else under physics control and not close: nudge towards target
-					rb.AddForce (toPlatformTarget.normalized * nudgeForce, ForceMode.Acceleration);	//TODO could improve performance further by setting direction just once? (normalized is heavy)
+					SetDoorTarget ();
+					transform.LookAt (trainTarget);	//maybe look at random target? or smoother
+					status = PersonStatus.MovingToTrainDoor;
+				}
+				//handle boarding situations (getting to door using force/velocity, getting into train using force)
+				Vector3 boardingVector = trainTarget - transform.position;
+				boardingVector.y = 0f;
+				Vector3 boardingVectorNormalized = boardingVector.normalized;
+				if (status == PersonStatus.MovingToTrainDoor && Time.time > nextCheckTime) {
+					boardUsingForce = !IsDirectionClear (boardingVectorNormalized);	//check proximity periodically to set boarding by velocity or by force
+					nextCheckTime = Time.time + checkingInterval;
+				}
+				if (status == PersonStatus.BoardingTrain || boardUsingForce) {
+					rb.AddForce (boardingForce * boardingVectorNormalized, ForceMode.Acceleration);	//TODO: use the below but apply at transform.position at start of push and at transform.position + rb.centerOfMass at the end of the pushing... this will mean people are not flopping over at the start of pushing
+					//rb.AddForceAtPosition (boardingForce*boardingVector.normalized,transform.position,ForceMode.Acceleration);
+				} else {
+					rb.velocity = nmAgent.speed * boardingVectorNormalized;
+				}
+			} else { //catches all other TRAIN statuses
+				if (status == PersonStatus.MovingToTrainDoor || status == PersonStatus.BoardingTrain) {	//pick up anyone who failed to board train
+					status = PersonStatus.ReadyToBoard;
+				}
+				if (status == PersonStatus.ReadyToBoard) {
+					// could add an interval to this check if this is too heavy on performance (i.e. 'if (Time.time > nextCheckTime) {')
+					toPlatformTarget.x = platformTarget.x - transform.position.x;
+					toPlatformTarget.z = platformTarget.z - transform.position.z;
+					atPlatformTarget = toPlatformTarget.sqrMagnitude < 0.01f;	//<0.1^2
+					if (atPlatformTarget && nmAgent.enabled) {			//if under agent control and close to target: turn off agent
+						SetAgentControl (false);
+					} else if (!atPlatformTarget && !nmAgent.enabled) {	//else under physics control and not close: nudge towards target
+						rb.AddForce (toPlatformTarget.normalized * nudgeForce, ForceMode.Acceleration);	//TODO could improve performance further by setting direction just once? (normalized is heavy)
+					}
 				}
 			}
 		}
@@ -125,11 +130,6 @@ public class Person : MonoBehaviour {
 		return true;
 	}
 
-	void MoveUsingForce(Vector3 boardingVector) {
-		rb.AddForce (boardingForce * boardingVector.normalized, ForceMode.Acceleration);	//TODO: use the below but apply at transform.position at start of push and at transform.position + rb.centerOfMass at the end of the pushing... this will mean people are not flopping over at the start of pushing
-		//rb.AddForceAtPosition (boardingForce*boardingVector.normalized,transform.position,ForceMode.Acceleration);
-	}
-
 	void SetAgentControl(bool turnOn) {
 		rb.isKinematic = turnOn;
 		if (turnOn) {	//if turning on agent then turn off obstacle FIRST (having both active at same time causes warning)
@@ -142,7 +142,7 @@ public class Person : MonoBehaviour {
 	}
 
 	void SetDoorTarget() {
-		Vector3[] doorLocations = currentPlatform.incomingTrain.doors.Select (a => a.gameObject.transform.position).ToArray ();
+		Vector3[] doorLocations = myCurrentTimetableItem.train.doors.Select (a => a.gameObject.transform.position).ToArray ();
 		float shortestRoute = (doorLocations[0] - transform.position).sqrMagnitude;
 		int closestTargetIndex = 0;
 		for (int i=1;i<doorLocations.Count ();i++) {
@@ -172,7 +172,7 @@ public class Person : MonoBehaviour {
 				status = PersonStatus.BoardingTrain;
 			}
 		} else if (status == PersonStatus.MovingToTrainDoor) {
-			trainTarget.z += 2f * currentPlatform.incomingTrain.transform.localScale.z;	//perhaps train width if we ever go wider trains
+			trainTarget.z += 2f * myCurrentTimetableItem.train.transform.localScale.z;	//perhaps train width if we ever go wider trains
 			status = PersonStatus.BoardingTrain;
 		}
 	}
@@ -189,7 +189,7 @@ public class Person : MonoBehaviour {
 
 	public void OnTrainDeparture() {
 		Component.Destroy (rb);
-		transform.parent = currentPlatform.incomingTrain.transform;
+		transform.parent = myCurrentTimetableItem.train.transform;
 		status = PersonStatus.SatDown;
 	}
 
@@ -218,15 +218,10 @@ public class Person : MonoBehaviour {
 
 	public void OnPlatformEnter(Platform platform, Vector3 waitLocation) {
 		if (status == PersonStatus.MovingToPlatform) {	//this will exclude compromised people
-			currentPlatform = platform;
-			//if (destination == currentPlatform.nextDeparture) {
-				platformTarget = waitLocation;
-				nmAgent.SetDestination (platformTarget);
+			platformTarget = waitLocation;
+			nmAgent.SetDestination (platformTarget);
 			rb.constraints = RigidbodyConstraints.FreezePositionY;	//TODO: believe this is what is causing some people to penetrate the platform slightly (they must be reentering at wrong height)
-				status = PersonStatus.ReadyToBoard;
-			//} else {
-			//	status = PersonStatus.MovingToFoyer;	//currently unhandled
-			//}
+			status = PersonStatus.ReadyToBoard;
 		}
 	}
 

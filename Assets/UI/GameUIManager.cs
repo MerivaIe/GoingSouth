@@ -99,7 +99,7 @@ public class GameUIManager : MonoBehaviour {
 		clockText.text = ConvertGameTimeToHHMM (GameManager.instance.GetCurrentGameTime());
 	}
 
-	static string ConvertGameTimeToHHMM(float gameTime) {
+	public static string ConvertGameTimeToHHMM(float gameTime) {
 		return string.Format("{0:#00}:{1:00}", Mathf.Floor(gameTime/60),Mathf.Floor(gameTime) % 60);
 	}
 
