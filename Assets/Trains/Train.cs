@@ -94,6 +94,7 @@ public class Train : MonoBehaviour {
 		HandlePeopleOnboard ();
 		SetAccelerating ();
 		CalculateJourneyMetrics ();
+		Invoke ("CheckIfClearToEnterStation",journeyEndTime - journeyStartTime);	//invoke reenter station after journey duration
 	}
 	#endregion
 
@@ -103,7 +104,7 @@ public class Train : MonoBehaviour {
 		}
 	}
 
-	void CalculateJourneyMetrics ()	//TODO: if we end up calling to our timetable item a lot then maybe store a reference to it
+	void CalculateJourneyMetrics ()
 	{
 		journeyStartTime = Time.time;
 		float journeyDurationInGameMinutes = (myCurrentTimetableItem.destination.routeLength * 1000f) / (speed * 60f);	//distance in metres / speed in metres per min
@@ -111,29 +112,25 @@ public class Train : MonoBehaviour {
 		journeyEndTime = journeyStartTime + journeyDurationInRealSeconds;
 	}
 
-	public void RegisterPerson(Person person) {
-		peopleOnBoard.Add (person);
-	}
+	void CheckIfClearToEnterStation() {	//called once at the end of journey duration (invoked in Depart) and every time the train is assigned to a new timetable item
+		if (journeyEndTime >= Time.time && myCurrentTimetableItem != null && myCurrentTimetableItem.platform) {
+			SetTrainColor (myCurrentTimetableItem.destination.materialColor);
 
-	public void UnregisterPerson(Person person) {
-		try {
-			peopleOnBoard.Remove (person);
-		} catch {
-			Debug.LogError ("Could not find expected person in list of onboard people.");
+			Vector3 trackPosition = transform.position;
+			trackPosition.z = myCurrentTimetableItem.platform.platformSignalBounds.center.z;
+			transform.position = trackPosition;
+
+			direction = Vector3.right;
+			rb.velocity = direction * speed;
+			status = TrainStatus.Arriving;
+			journeyStartTime = 0f;
+			journeyEndTime = 0f;
 		}
 	}
 
-	public void SetTrainColor(Material _materialColor) {
-		materialColor = _materialColor;
-		foreach (MeshRenderer meshRenderer in GetComponentsInChildren <MeshRenderer>()) {	//set all external faces of train to this color
-			if (meshRenderer.sharedMaterial.name.Length >= 13 && meshRenderer.sharedMaterial.name.Substring (0, 13) == "TrainExternal") {
-				meshRenderer.sharedMaterial = materialColor;
-			}
-		}
-	}
 	public void OnAssignedToTimetableItem(TimetableItem timetableItem) {
 		myCurrentTimetableItem = timetableItem;
-		SetTrainColor (myCurrentTimetableItem.destination.materialColor);
+		CheckIfClearToEnterStation ();
 	}
 
 	public float GetJourneyProgress() {	//return 0-1 for slider value
@@ -156,11 +153,25 @@ public class Train : MonoBehaviour {
 		}
 	}
 
-	public void LeaveDockAndEnterStation() {
-		//TODO set transform = platform signal trigger
-		direction = Vector3.right;
-		rb.velocity = direction * speed;
-		status = TrainStatus.Arriving;
+	public void SetTrainColor(Material _materialColor) {
+		materialColor = _materialColor;
+		foreach (MeshRenderer meshRenderer in GetComponentsInChildren <MeshRenderer>()) {	//set all external faces of train to this color
+			if (meshRenderer.sharedMaterial.name.Length >= 13 && meshRenderer.sharedMaterial.name.Substring (0, 13) == "TrainExternal") {
+				meshRenderer.sharedMaterial = materialColor;
+			}
+		}
+	}
+
+	public void RegisterPerson(Person person) {
+		peopleOnBoard.Add (person);
+	}
+
+	public void UnregisterPerson(Person person) {
+		try {
+			peopleOnBoard.Remove (person);
+		} catch {
+			Debug.LogError ("Could not find expected person in list of onboard people.");
+		}
 	}
 
 	void OnDrawGizmos() {

@@ -16,6 +16,7 @@ public class ExhaustibleList<MyType> {
 			return availableOptions.AsReadOnly ();
 		}
 	}
+
 	public ReadOnlyCollection<MyType> AllOptions{
 		get{
 			return availableOptions.Concat (exhaustedOptions).ToList ().AsReadOnly ();

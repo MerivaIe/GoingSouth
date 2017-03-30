@@ -7,14 +7,16 @@ using UnityEngine;
 /// </summary>
 public class TimetableItem {
 	public float scheduledDepartureTime;
-	public Platform platform;
-	public Train train;
-	public Destination destination;
-	public bool journeyInProgress;	//required?
+	public Platform platform { get; private set; }
+	public Train train { get; private set; }
+	public Destination destination { get; private set; }
 
-	public TimetableItem(Destination _destination, float _schedDepartureTime) {
-		destination = _destination;
+	public TimetableItem(float _schedDepartureTime) {
 		scheduledDepartureTime = _schedDepartureTime;
+	}
+
+	public void SetDestination(Destination _destination) {
+		destination = _destination;
 	}
 
 	public void SetTrain(Train _train) {
@@ -26,9 +28,5 @@ public class TimetableItem {
 	public void SetPlatform (Platform _platform) {
 		platform = _platform;
 		platform.OnAssignedToTimetableItem (this);
-	}
-
-	public void SetJourneyActive(bool _journeyInProg) {
-		journeyInProgress = _journeyInProg;
 	}
 }

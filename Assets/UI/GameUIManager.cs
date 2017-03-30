@@ -115,7 +115,7 @@ public class GameUIManager : MonoBehaviour {
 		timetableItemsParent.GetComponent <CanvasGroup> ().interactable = false;
 		defaultOptionsMenu.SetActive (false);
 		//pass message to the GameManager to add an item to the Model and store in our activeTimetableItem reference for later manipulation
-		activeTimetableItem = GameManager.instance.CreateTimetableItem (GameManager.instance.destinations[0],GameManager.instance.GetCurrentGameTime ());
+		activeTimetableItem = GameManager.instance.CreateTimetableItem (GameManager.instance.GetCurrentGameTime ());
 		creation_schedDepartureTimeText.text = ConvertGameTimeToHHMM (activeTimetableItem.scheduledDepartureTime);	//initially set the time to the current time
 		itemCreationMenu.SetActive (true);
 	}
@@ -204,9 +204,9 @@ public class GameUIManager : MonoBehaviour {
 	public void OnClick_WipeModifiedItem() {
 		TimetableItemUIObject timetableItemUIObject;
 		timetableUITracker.TryGetValueBySecond (activeTimetableItem, out timetableItemUIObject);
-		activeTimetableItem.platform = null;
+		activeTimetableItem.SetPlatform (null);
 		timetableItemUIObject.platformText.text = "";
-		activeTimetableItem.train = null;
+		activeTimetableItem.SetTrain (null);
 		timetableItemUIObject.trainText.text = "";
 		ReturnToDefaultOptionsMenu (itemModificationMenu);
 	}

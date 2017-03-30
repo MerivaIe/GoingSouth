@@ -88,28 +88,6 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 	}
 
 	void GenerateTimetable(List<Destination> destinations) {	//decided by player: for each destination, avg time between trains
-		//...but at the moment just some dummy stuff in here for the five trains in scene
-
-		//TODO configure these so that they are the correct trains going to the correct platforms
-		TimetableItem timetableItem = new TimetableItem(destinations[0],dayStartInMinutes + minutesPerSecond * 50f);
-		timetableItem.SetPlatform (platforms.AvailableOptions[0]);
-		timetableItem.SetTrain (trainPool.AvailableOptions[0]);
-		timetable.Add (timetableItem);
-
-		timetableItem = new TimetableItem(destinations[0],dayStartInMinutes + minutesPerSecond * 100f);
-		timetableItem.SetPlatform (platforms.AvailableOptions[1]);
-		timetableItem.SetTrain (trainPool.AvailableOptions[1]);
-		timetable.Add (timetableItem);
-
-		timetableItem = new TimetableItem(destinations[1],dayStartInMinutes + minutesPerSecond * 50f);
-		timetableItem.SetPlatform (platforms.AvailableOptions[2]);
-		timetableItem.SetTrain (trainPool.AvailableOptions[2]);
-		timetable.Add (timetableItem);
-
-		timetableItem = new TimetableItem(destinations[2],dayStartInMinutes + minutesPerSecond * 100f);
-		timetableItem.SetPlatform (platforms.AvailableOptions[3]);
-		timetableItem.SetTrain (trainPool.AvailableOptions[3]);
-		timetable.Add (timetableItem);
 	}
 
 	public float GetCurrentGameTime() {
@@ -130,24 +108,24 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 		return null;
 	}
 
-	public TimetableItem CreateTimetableItem(Destination destination,float scheduledDepartureTime) {
-		TimetableItem newTimetableItem = new TimetableItem (destination, scheduledDepartureTime);
+	public TimetableItem CreateTimetableItem(float scheduledDepartureTime) {
+		TimetableItem newTimetableItem = new TimetableItem (scheduledDepartureTime);
 		timetable.Add (newTimetableItem);
 		return newTimetableItem;
 	}
 
 	public void AssignTrainToTimetableItem(int trainIndex, TimetableItem timetableItem) {
-		timetableItem.train = trainPool.AvailableOptions [trainIndex];
+		timetableItem.SetTrain (trainPool.AvailableOptions [trainIndex]);
 		trainPool.ExhaustOption (timetableItem.train);
 	}
 
 	public void AssignPlatformToTimetableItem(int platformIndex, TimetableItem timetableItem) {
-		timetableItem.platform = platforms.AvailableOptions [platformIndex];
+		timetableItem.SetPlatform (platforms.AvailableOptions [platformIndex]);
 		platforms.ExhaustOption (timetableItem.platform);
 	}
 
 	public void AssignDestinationToTimetableItem(int destinationIndex, TimetableItem timetableItem) {
-		timetableItem.destination = destinations [destinationIndex];
+		timetableItem.SetDestination (destinations [destinationIndex]);
 	}
 
 	public void AddObjectsToDeletionQueue(List<GameObject> gameObjectToDelete) {

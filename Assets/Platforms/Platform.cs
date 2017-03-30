@@ -11,12 +11,14 @@ public class Platform : MonoBehaviour {
 	public float waitSpacing = 1f;
 	public int platformNumber;
 	public Train incomingTrain { get; private set; }
+	public Bounds platformSignalBounds { get; private set; }
 
 	private List<WaitLocation> waitLocations = new List<WaitLocation> ();
 	private Bounds platformTriggerBounds;
 
 	void Start () {
 		platformTriggerBounds = GetComponentInChildren<PlatformTrigger>().gameObject.GetComponent <BoxCollider>().bounds;
+		platformSignalBounds = GetComponentInChildren<Signal> ().gameObject.GetComponent <BoxCollider> ().bounds;
 		incomingTrain = GameManager.instance.GetNextTrain (this);
 
 		CalculateNewWaitLocations ();
