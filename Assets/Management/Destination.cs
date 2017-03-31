@@ -10,6 +10,7 @@ public class Destination {
 	public string name{ get; private set; }
 	public int routeLength { get; private set; }
 	public TimetableItem soonestTimetableItem { get; private set; }	//earliest timetable item available to this destination (that is ready to go i.e.  has a platform assignment?)
+	public float meanSpawnDelay {get; private set;}
 
 	int estimatedDailyFootfall;
 	static List<Material> availableMaterialColors = new List<Material>();
@@ -18,6 +19,8 @@ public class Destination {
 		name = _name;
 		routeLength = _routeLength;	//in km
 		estimatedDailyFootfall = _estimatedDailyFootfall;
+
+		meanSpawnDelay = (GameManager.dayDurationInGameMinutes / GameManager.gameMinutesPerRealSecond) / estimatedDailyFootfall;	//==(day duration in real seconds)/no. of people to spawn
 
 		int noColorsAvailable = availableMaterialColors.Count;
 

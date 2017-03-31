@@ -59,17 +59,17 @@ public class Person : MonoBehaviour {
 	}
 
 	void CheckForTimetableChanges() {
-		
 		if (desiredDestination.soonestTimetableItem != null && desiredDestination.soonestTimetableItem != myTargetTimetableItem) {
 			switch (status) {	//only statuses where person is at waiting area, moving to platform, or waiting at platform- any other statuses mean Person is already boarding train or compromised
 			case PersonStatus.MovingToFoyer:
 			case PersonStatus.MovingToPlatform:
 			case PersonStatus.ReadyToBoard:
 				myTargetTimetableItem = desiredDestination.soonestTimetableItem;
-				SetAgentControl (true);
-				nmAgent.SetDestination (myTargetTimetableItem.platform.gameObject.transform.position);
+				SetMovingToPlatform (myTargetTimetableItem.platform.transform.position);
 				break;
 			}
+		} else if (desiredDestination.soonestTimetableItem == null && myTargetTimetableItem != null) {
+			//TODO: make UI call into GameManager to wipe soonestTimetableItem from destination if platform wiped... the people will pick this up
 		}
 	}
 

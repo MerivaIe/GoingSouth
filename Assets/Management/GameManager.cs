@@ -6,8 +6,8 @@ using System.Linq;
 using MoreLinq;
 
 public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
-	public const float minutesPerSecond = 1f;
-	public const int dayStartInMinutes = 180;
+	public const float gameMinutesPerRealSecond = 1f;
+	public const int dayStartInGameMinutes = 180, dayDurationInGameMinutes = 1080;
 	public ExhaustibleList<Platform> platforms{ get; private set; }
 	public ExhaustibleList<Train> trainPool { get; private set; }
 	public ExhaustibleList<Vector3> trainDockingPoints { get; private set; }
@@ -88,7 +88,7 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 	}
 
 	public float GetCurrentGameTime() {
-		return dayStartInMinutes + minutesPerSecond * Time.time;
+		return dayStartInGameMinutes + gameMinutesPerRealSecond * Time.time;
 	}
 
 	public TimetableItem CreateTimetableItem(float scheduledDepartureTime) {

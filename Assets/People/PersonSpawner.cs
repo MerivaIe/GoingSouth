@@ -5,8 +5,6 @@ using UnityEngine.AI;
 
 public class PersonSpawner : MonoBehaviour {
 
-	[Tooltip ("Time between people spawns (0.2 for 5 per second)")]
-	public float meanSpawnDelay = 1f;
 	public GameObject personPrefab;
 
 	private Spawnpoint[] spawnPoints;
@@ -19,24 +17,25 @@ public class PersonSpawner : MonoBehaviour {
 	}
 	
 	void Update () {
-		foreach (Spawnpoint spawnPoint in spawnPoints) {
-			if (IsTimeToSpawn ()) {
-				GameObject personGO = Instantiate (personPrefab, spawnPoint.transform.position, Quaternion.identity,organisingParent.transform) as GameObject;
-				Vector3 platformPos = GameManager.instance.platforms.AllOptions[Random.Range (0, GameManager.instance.platforms.AvailableOptions.Count)].transform.position;	//set platform destination randomly from publically exposed platforms
-				personGO.GetComponent <Person>().SetMovingToPlatform (platformPos);
+		foreach (Destination dest in GameManager.instance.destinations) {
+			if (IsTimeToSpawn (dest)) {
+				GameObject personGO = Instantiate (personPrefab, spawnPoints[Random.Range (0,spawnPoints.GetUpperBound (0))].transform.position, Quaternion.identity, organisingParent.transform) as GameObject;
+				//TODO: just set to foyer area... not platform
+				Vector3 platformPos = GameManager.instance.platforms.AllOptions [Random.Range (0, GameManager.instance.platforms.AvailableOptions.Count)].transform.position;	//set platform destination randomly from publically exposed platforms
+				personGO.GetComponent <Person> ().SetMovingToPlatform (platformPos);
 			}
 		}
 	}
 
-	bool IsTimeToSpawn() {
-		float spawnsPerSecond = 1f /meanSpawnDelay;
+	bool IsTimeToSpawn(Destination destination) {
+		float spawnsPerSecond = 1f / destination.meanSpawnDelay;
 
-		if(Time.deltaTime > meanSpawnDelay) {
+		if(Time.deltaTime > destination.meanSpawnDelay) {
 			Debug.LogWarning("Spawn rate capped by frame rate (time between frames lower than spawn delay) ");
 		}
 
-		//arbitrary threshold based on frame rate (/ spawnPoints.Length because we are spawning at multiple sites at the moment)
-		float threshold = spawnsPerSecond * Time.deltaTime / spawnPoints.Length;
+		//arbitrary threshold based on frame rate
+		float threshold = spawnsPerSecond * Time.deltaTime;
 		float randomValue = Random.value;
 		return (randomValue < threshold);
 	}

@@ -108,7 +108,7 @@ public class Train : MonoBehaviour {
 	{
 		journeyStartTime = Time.time;
 		float journeyDurationInGameMinutes = (myCurrentTimetableItem.destination.routeLength * 1000f) / (speed * 60f);	//distance in metres / speed in metres per min
-		float journeyDurationInRealSeconds = journeyDurationInGameMinutes / GameManager.minutesPerSecond;
+		float journeyDurationInRealSeconds = journeyDurationInGameMinutes / GameManager.gameMinutesPerRealSecond;
 		journeyEndTime = journeyStartTime + journeyDurationInRealSeconds;
 	}
 
