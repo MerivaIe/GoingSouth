@@ -26,7 +26,7 @@ public class Person : MonoBehaviour {
 	private static float[] proximityAngles;
 	private float nextCheckTime = 0f;
 	private bool boardUsingForce = false, atPlatformTarget = false;
-	private TimetableItem myCurrentTimetableItem;
+	private TimetableItem myTargetTimetableItem;
 
 	void Awake () {	//needs to be Awake because Start() is not called before methods on instantiated gameObject it seems
 		rb = GetComponent <Rigidbody> ();
@@ -44,7 +44,7 @@ public class Person : MonoBehaviour {
 			GenerateFanAngles (5,90);
 		}
 
-		InvokeRepeating ("CheckForTimetableChange",0,checkingInterval * 10f);
+		InvokeRepeating ("CheckForTimetableChanges",0,checkingInterval * 10f);
 	}
 
 	// Found out that you can use rb.SweepTest() to do pretty much this same thing. Some suggest custom raycasting slightly more efficient though so will leave it
@@ -58,19 +58,27 @@ public class Person : MonoBehaviour {
 		}
 	}
 
-	void CheckForTimetableChange() {
-		//need to decide whether this should have logic behind it... i.e. if it changes then should we do something specific, or should it jsut be set
-		myCurrentTimetableItem = GameManager.instance.timetable.Where(t => t.destination == desiredDestination).MinBy (t => t.scheduledDepartureTime);
-		//TODO separate this out... if none returend by Where then does it read null? then dont need to do the MinBy
-		//maybe a check here if null?
+	void CheckForTimetableChanges() {
+		
+		if (desiredDestination.soonestTimetableItem != null && desiredDestination.soonestTimetableItem != myTargetTimetableItem) {
+			switch (status) {	//only statuses where person is at waiting area, moving to platform, or waiting at platform- any other statuses mean Person is already boarding train or compromised
+			case PersonStatus.MovingToFoyer:
+			case PersonStatus.MovingToPlatform:
+			case PersonStatus.ReadyToBoard:
+				myTargetTimetableItem = desiredDestination.soonestTimetableItem;
+				SetAgentControl (true);
+				nmAgent.SetDestination (myTargetTimetableItem.platform.gameObject.transform.position);
+				break;
+			}
+		}
 	}
 
 	//might be better to actually do all of this on a switch(on status) at the base level actually- it is getting hard to read
 	void FixedUpdate() {
-		if (myCurrentTimetableItem == null || myCurrentTimetableItem.train == null) {return;}
+		if (myTargetTimetableItem == null || myTargetTimetableItem.train == null) {return;}
 		//only the four following statuses need to be handled in fixed update...
 		if (status == PersonStatus.FindingSeat || status == PersonStatus.ReadyToBoard || status == PersonStatus.MovingToTrainDoor || status == PersonStatus.BoardingTrain) {
-			if (myCurrentTimetableItem.train.status == Train.TrainStatus.BoardingTime) {
+			if (myTargetTimetableItem.train.status == Train.TrainStatus.BoardingTime) {
 				if (status == PersonStatus.FindingSeat) {
 					if (rb.mass == 10f && Vector3.Angle (transform.up, Vector3.up) < 30f) {	//if this is a light person and they are standing then add up force for crowd surfing
 						rb.AddForce (Vector3.up, ForceMode.Acceleration);
@@ -142,7 +150,7 @@ public class Person : MonoBehaviour {
 	}
 
 	void SetDoorTarget() {
-		Vector3[] doorLocations = myCurrentTimetableItem.train.doors.Select (a => a.gameObject.transform.position).ToArray ();
+		Vector3[] doorLocations = myTargetTimetableItem.train.doors.Select (a => a.gameObject.transform.position).ToArray ();
 		float shortestRoute = (doorLocations[0] - transform.position).sqrMagnitude;
 		int closestTargetIndex = 0;
 		for (int i=1;i<doorLocations.Count ();i++) {
@@ -172,7 +180,7 @@ public class Person : MonoBehaviour {
 				status = PersonStatus.BoardingTrain;
 			}
 		} else if (status == PersonStatus.MovingToTrainDoor) {
-			trainTarget.z += 2f * myCurrentTimetableItem.train.transform.localScale.z;	//perhaps train width if we ever go wider trains
+			trainTarget.z += 2f * myTargetTimetableItem.train.transform.localScale.z;	//perhaps train width if we ever go wider trains
 			status = PersonStatus.BoardingTrain;
 		}
 	}
@@ -189,7 +197,7 @@ public class Person : MonoBehaviour {
 
 	public void OnTrainDeparture() {
 		Component.Destroy (rb);
-		transform.parent = myCurrentTimetableItem.train.transform;
+		transform.parent = myTargetTimetableItem.train.transform;
 		status = PersonStatus.SatDown;
 	}
 

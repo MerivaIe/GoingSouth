@@ -3,14 +3,15 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using System.Linq;
+using MoreLinq;
 
 public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 	public const float minutesPerSecond = 1f;
 	public const int dayStartInMinutes = 180;
 	public ExhaustibleList<Platform> platforms{ get; private set; }
 	public ExhaustibleList<Train> trainPool { get; private set; }
-	public List<Destination> destinations{ get; private set; }
 	public ExhaustibleList<Vector3> trainDockingPoints { get; private set; }
+	public List<Destination> destinations{ get; private set; }
 	public List<TimetableItem> timetable{ get; private set; }
 	public List<Material> defaultMaterialColors;
 	public int trainCount = 4;
@@ -83,34 +84,15 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 			destinations.Add (new Destination ("Basimgstoke", 100, 1000));
 
 			timetable = new List<TimetableItem>();
-			GenerateTimetable (destinations);
 		}
-	}
-
-	void GenerateTimetable(List<Destination> destinations) {	//decided by player: for each destination, avg time between trains
 	}
 
 	public float GetCurrentGameTime() {
 		return dayStartInMinutes + minutesPerSecond * Time.time;
 	}
 
-	public Train GetNextTrain(Platform platform) {
-		TimetableItem timeTableItem = timetable.FirstOrDefault (a => a.platform == platform);
-		if (timeTableItem == default(TimetableItem)) {
-			Debug.LogWarning ("This platform is requesting next train but has no entries in the timetable.");
-		} else {
-			if (timeTableItem.train) {
-				return timeTableItem.train;
-			} else {
-				Debug.LogWarning ("Platform requested next train from timetable but no train is assigned to this platform.");
-			}
-		}
-		return null;
-	}
-
 	public TimetableItem CreateTimetableItem(float scheduledDepartureTime) {
 		TimetableItem newTimetableItem = new TimetableItem (scheduledDepartureTime);
-		timetable.Add (newTimetableItem);
 		return newTimetableItem;
 	}
 
@@ -122,10 +104,13 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 	public void AssignPlatformToTimetableItem(int platformIndex, TimetableItem timetableItem) {
 		timetableItem.SetPlatform (platforms.AvailableOptions [platformIndex]);
 		platforms.ExhaustOption (timetableItem.platform);
+		RecalculateSoonestTimetableItemForDestination (timetableItem.destination);
 	}
 
-	public void AssignDestinationToTimetableItem(int destinationIndex, TimetableItem timetableItem) {
+	public void ConfirmCreatedTimetableItem(int destinationIndex, TimetableItem timetableItem) {
+		//scheduled departure time of the timetableItem passed to us is already set as it is changed by GameUIManager in response to player input
 		timetableItem.SetDestination (destinations [destinationIndex]);
+		timetable.Add (timetableItem);
 	}
 
 	public void AddObjectsToDeletionQueue(List<GameObject> gameObjectToDelete) {
@@ -140,6 +125,13 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 			CancelInvoke ();
 		} else {
 			GameObject.Destroy (destructionQueue[0]);
+		}
+	}
+
+	void RecalculateSoonestTimetableItemForDestination(Destination dest) {	//will only occur on platform assignment (ignore timetable items without platform assignments)
+		IEnumerable<TimetableItem> timetableByDestination = GameManager.instance.timetable.Where(t => t.destination == dest);	//collection of timetable items to this destination
+		if (timetableByDestination.Any ()) {																					//if no timetable items to this destination skip
+			dest.SetSoonestTimetableItem (timetableByDestination.MinBy (t => t.scheduledDepartureTime));						//if there are, retrieve the earliest one
 		}
 	}
 }

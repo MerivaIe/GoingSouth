@@ -9,6 +9,7 @@ public class Destination {
 	public Material materialColor{ get; private set; }
 	public string name{ get; private set; }
 	public int routeLength { get; private set; }
+	public TimetableItem soonestTimetableItem { get; private set; }	//earliest timetable item available to this destination (that is ready to go i.e.  has a platform assignment?)
 
 	int estimatedDailyFootfall;
 	static List<Material> availableMaterialColors = new List<Material>();
@@ -32,6 +33,10 @@ public class Destination {
 		int randIndex = Random.Range (0, noColorsAvailable);
 		materialColor = availableMaterialColors [randIndex];
 		availableMaterialColors.RemoveAt (randIndex);
+	}
+
+	public void SetSoonestTimetableItem(TimetableItem timetableItem) {
+		soonestTimetableItem = timetableItem;
 	}
 
 //	Color RandomColor() {	//may be required
