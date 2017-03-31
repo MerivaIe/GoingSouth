@@ -7,31 +7,31 @@ using System.Linq;
 /// <summary>
 /// Exhaustible list: wen an option is chosen it becomes unavailable. At the moment the onus is on the caller to exhaust the option just chosen- would be nice to extend List and then override the index method so that when something is retrieved this class removes it.
 /// </summary>
-public class ExhaustibleList<MyType> {
-	private List<MyType> availableOptions = new List<MyType> ();
-	private List<MyType> exhaustedOptions = new List<MyType>();
+public class ExhaustibleList<T> {
+	private List<T> availableOptions = new List<T> ();
+	private List<T> exhaustedOptions = new List<T>();
 
-	public ReadOnlyCollection<MyType> AvailableOptions{
+	public ReadOnlyCollection<T> AvailableOptions{
 		get{
 			return availableOptions.AsReadOnly ();
 		}
 	}
 
-	public ReadOnlyCollection<MyType> AllOptions{
+	public ReadOnlyCollection<T> AllOptions{
 		get{
 			return availableOptions.Concat (exhaustedOptions).ToList ().AsReadOnly ();
 		}
 	}
 
-	public void Add(MyType item) {
+	public void Add(T item) {
 		availableOptions.Add (item);
 	}
 
-	public void AddRange(List<MyType> listToAdd) {
+	public void AddRange(List<T> listToAdd) {
 		availableOptions.AddRange (listToAdd);
 	}
 
-	public void ExhaustOption(MyType item) {
+	public void ExhaustOption(T item) {
 		if (availableOptions.Contains (item)) {
 			exhaustedOptions.Add (item);
 			availableOptions.Remove (item);
@@ -48,7 +48,7 @@ public class ExhaustibleList<MyType> {
 		}
 	}
 
-	public void RestoreOption(MyType item) {
+	public void RestoreOption(T item) {
 		if (exhaustedOptions.Contains (item)) {
 			availableOptions.Add (item);
 			exhaustedOptions.Remove (item);

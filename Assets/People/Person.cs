@@ -224,17 +224,23 @@ public class Person : MonoBehaviour {
 		}
 	}
 
-	public void OnPlatformEnter(Platform platform, Vector3 waitLocation) {
-		if (status == PersonStatus.MovingToPlatform) {	//this will exclude compromised people
-			platformTarget = waitLocation;
-			nmAgent.SetDestination (platformTarget);
-			rb.constraints = RigidbodyConstraints.FreezePositionY;	//TODO: believe this is what is causing some people to penetrate the platform slightly (they must be reentering at wrong height)
-			status = PersonStatus.ReadyToBoard;
+	public void OnWaitingAreaEnter(bool isPlatform, Vector3 waitLocation) {	
+		if (isPlatform) {
+			if (status == PersonStatus.MovingToPlatform) {	//this will exclude compromised people
+				platformTarget = waitLocation;
+				nmAgent.SetDestination (platformTarget);
+				rb.constraints = RigidbodyConstraints.FreezePositionY;	//TODO: believe this is what is causing some people to penetrate the platform slightly (they must be reentering at wrong height)
+				status = PersonStatus.ReadyToBoard;
+			}
+		} else {
+			//TODO: this needs to vary depending on whether entering a generic waiting area or a platform
 		}
 	}
 
-	public void OnPlatformExit() {	//TODO: do we need to nullify currentPlatform?
-		rb.constraints = RigidbodyConstraints.None;
+	public void OnWaitingAreaExit(bool isPlatform) {
+		if (isPlatform) {
+			rb.constraints = RigidbodyConstraints.None;
+		}
 	}
 
 	public void OnTrainEnter() {

@@ -4,29 +4,25 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.AI;
 
-public class Platform : MonoBehaviour {
+public class WaitingArea : MonoBehaviour {
 
 	[Tooltip("MUST SET THIS MANUALLY AS NAVMESH API IS LACKING")]
 	public float nmAgentRadius = 0.5f;
 	public float waitSpacing = 1f;
-	public int platformNumber;
-	//public Train incomingTrain { get; private set; }
-	public Bounds platformSignalBounds { get; private set; }
+	public bool isPlatform { get; private set; }
 
 	private List<WaitLocation> waitLocations = new List<WaitLocation> ();
-	private Bounds platformTriggerBounds;
+	private Bounds waitAreaTriggerBounds;
 
 	void Start () {
-		platformTriggerBounds = GetComponentInChildren<PlatformTrigger>().gameObject.GetComponent <BoxCollider>().bounds;
-		platformSignalBounds = GetComponentInChildren<Signal> ().gameObject.GetComponent <BoxCollider> ().bounds;
-
-		CalculateNewWaitLocations ();
+		waitAreaTriggerBounds = GetComponentInChildren<WaitingAreaTrigger>().gameObject.GetComponent <BoxCollider>().bounds;
+		isPlatform = GetComponent <Platform> ();
 	}
-		
+
 	void CalculateNewWaitLocations(){	// a nice way of doing this would be to store old locations generated and workaround them
-		PoissonDiscSampler sampler = new PoissonDiscSampler (platformTriggerBounds.size.x - 2*nmAgentRadius, platformTriggerBounds.size.z - 2*nmAgentRadius, waitSpacing);
+		PoissonDiscSampler sampler = new PoissonDiscSampler (waitAreaTriggerBounds.size.x - 2*nmAgentRadius, waitAreaTriggerBounds.size.z - 2*nmAgentRadius, waitSpacing);
 		foreach (Vector2 sample in sampler.Samples()) {
-			Vector3 waitLocation = platformTriggerBounds.min;	//place at the '0,0' location for the generated grid
+			Vector3 waitLocation = waitAreaTriggerBounds.min;	//place at the '0,0' location for the generated grid
 			waitLocation.x += sample.x + nmAgentRadius;
 			waitLocation.z += sample.y + nmAgentRadius;
 			NavMeshHit hit;										//using SamplePosition to make absolutely sure the wait location we have generated ends up on the navmesh
@@ -53,10 +49,6 @@ public class Platform : MonoBehaviour {
 		} catch {
 			Debug.LogError ("Could not find expected person in platform list.");
 		}
-	}
-		
-	public void OnAssignedToTimetableItem(TimetableItem timetableItem) {
-		//TODO change colour of text being displayed and also the name of destination
 	}
 
 	private class WaitLocation {
