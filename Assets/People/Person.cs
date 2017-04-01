@@ -13,19 +13,19 @@ public class Person : MonoBehaviour {
 	/// <summary>
 	/// PersonStatus: MovingToPlatform=nmAgent control to centre of platform | WrongPlatform=nmAgent control to waiting area | MovingToDoor=nmAgent control to one door location | Boarding=physics control avoidance of others
 	/// </summary>
-	public enum PersonStatus{MovingToWaitingArea,AtWaitingArea,MovingToPlatform,ReadyToBoard,MovingToTrainDoor,BoardingTrain,FindingSeat,SatDown,Alighted,Compromised}
-	public PersonStatus status; 
-	public Destination desiredDestination{ get; private set; }
+	public enum PersonStatus{MovingToFoyer,AtFoyer,MovingToPlatform,ReadyToBoard,MovingToTrainDoor,BoardingTrain,FindingSeat,SatDown,Alighted,Compromised}
+	public PersonStatus status;
+	public Destination desiredDestination;
 	public float boardingForce = 20f, nudgeForce = 1f, checkingInterval = 0.5f,proximityDistance = 0.5f, centreOfMassYOffset = 0f;
 	public static float sqrTargetThreshold = 4f;
 
 	private NavMeshAgent nmAgent;
 	private NavMeshObstacle nmObstacle;
 	private Rigidbody rb;
-	private Vector3 platformTarget, trainTarget, toPlatformTarget;
+	private Vector3 waitingTarget, trainTarget, toWaitingTarget;
 	private static float[] proximityAngles;
 	private float nextCheckTime = 0f;
-	private bool boardUsingForce = false, atPlatformTarget = false;
+	private bool boardUsingForce = false, atWaitingTarget = false;
 	private TimetableItem myTargetTimetableItem;
 
 	void Awake () {	//needs to be Awake because Start() is not called before methods on instantiated gameObject it seems
@@ -38,7 +38,7 @@ public class Person : MonoBehaviour {
 		newCentreOfMass.y = centreOfMassYOffset;
 		rb.centerOfMass = newCentreOfMass;
 
-		toPlatformTarget.y = 0f;	//we will only ever modify the xz
+		toWaitingTarget.y = 0f;	//we will only ever modify the xz
 		insideTrain = false;
 		if (proximityAngles == null) {
 			GenerateFanAngles (5,90);
@@ -61,11 +61,12 @@ public class Person : MonoBehaviour {
 	void CheckForTimetableChanges() {
 		if (desiredDestination.soonestTimetableItem != null && desiredDestination.soonestTimetableItem != myTargetTimetableItem) {
 			switch (status) {	//only statuses where person is at waiting area, moving to platform, or waiting at platform- any other statuses mean Person is already boarding train or compromised
-			case PersonStatus.MovingToWaitingArea:
+			case PersonStatus.MovingToFoyer:
+			case PersonStatus.AtFoyer:
 			case PersonStatus.MovingToPlatform:
 			case PersonStatus.ReadyToBoard:
 				myTargetTimetableItem = desiredDestination.soonestTimetableItem;
-				SetMovingToPlatform (myTargetTimetableItem.platform.transform.position);
+				SetMovingToWaitingArea (true,myTargetTimetableItem.platform.transform.position);
 				break;
 			}
 		} else if (desiredDestination.soonestTimetableItem == null && myTargetTimetableItem != null) {
@@ -112,13 +113,13 @@ public class Person : MonoBehaviour {
 				}
 				if (status == PersonStatus.ReadyToBoard) {
 					// could add an interval to this check if this is too heavy on performance (i.e. 'if (Time.time > nextCheckTime) {')
-					toPlatformTarget.x = platformTarget.x - transform.position.x;
-					toPlatformTarget.z = platformTarget.z - transform.position.z;
-					atPlatformTarget = toPlatformTarget.sqrMagnitude < 0.01f;	//<0.1^2
-					if (atPlatformTarget && nmAgent.enabled) {			//if under agent control and close to target: turn off agent
+					toWaitingTarget.x = waitingTarget.x - transform.position.x;
+					toWaitingTarget.z = waitingTarget.z - transform.position.z;
+					atWaitingTarget = toWaitingTarget.sqrMagnitude < 0.01f;	//<0.1^2
+					if (atWaitingTarget && nmAgent.enabled) {			//if under agent control and close to target: turn off agent
 						SetAgentControl (false);
-					} else if (!atPlatformTarget && !nmAgent.enabled) {	//else under physics control and not close: nudge towards target
-						rb.AddForce (toPlatformTarget.normalized * nudgeForce, ForceMode.Acceleration);	//TODO could improve performance further by setting direction just once? (normalized is heavy)
+					} else if (!atWaitingTarget && !nmAgent.enabled) {	//else under physics control and not close: nudge towards target
+						rb.AddForce (toWaitingTarget.normalized * nudgeForce, ForceMode.Acceleration);	//TODO could improve performance further by setting direction just once? (normalized is heavy)
 					}
 				}
 			}
@@ -201,38 +202,32 @@ public class Person : MonoBehaviour {
 		status = PersonStatus.SatDown;
 	}
 
-	public void SetMovingToPlatform(Vector3 optionalPlatformTarget) {
+	public void SetMovingToWaitingArea(bool isPlatform, Vector3 optionalWaitingTarget) {
 		SetAgentControl (true);	//may jerk them up... change this to after a recovery period once they have stood up?
-		platformTarget = optionalPlatformTarget;
-		nmAgent.SetDestination (platformTarget);
-		status = PersonStatus.MovingToPlatform;	
+		waitingTarget = optionalWaitingTarget;
+		nmAgent.SetDestination (waitingTarget);
+		status = isPlatform? PersonStatus.MovingToPlatform : PersonStatus.MovingToFoyer;	
 	}
-	public void SetMovingToPlatform() {
-		if (platformTarget == Vector3.zero) {	//TODO: this might on very rare occasions cause an error if there is a platform situated at 0,0,0
-			Debug.LogWarning ("No platform target provided by caller and we do not have one already stored. Please specify platform target using overloaded method.");
-			//TODO maybe return to foyer/default
-		} else {
-			SetAgentControl (true);	//may jerk them up... change this to after a recovery period once they have stood up?
-			nmAgent.SetDestination (platformTarget);
-			status = PersonStatus.MovingToPlatform;
-		}
+	public void SetMovingToWaitingArea() {	//this exists purely so that this function can be invoked by OnHitGround()
+		bool isPlatform = !(status == PersonStatus.AtFoyer || status == PersonStatus.MovingToFoyer);
+		SetMovingToWaitingArea (isPlatform,waitingTarget);
 	}
 
-	public void OnHitGround() {
+	public void OnHitGround() {				//make the person return to their waiting area
 		if (status != PersonStatus.Compromised) {	//TODO what if they hit ground from foyer rather than platform
-			Invoke("SetMovingToPlatform",2f);		//TODO: invoke after they have stood up
+			Invoke("SetMovingToWaitingArea",2f);		//TODO: invoke after they have stood up
 		}
 	}
 
 	public void OnWaitingAreaEnter(Vector3 waitLocation) {	
-		platformTarget = waitLocation;
-		nmAgent.SetDestination (platformTarget);
+		waitingTarget = waitLocation;
+		nmAgent.SetDestination (waitingTarget);
 		rb.constraints = RigidbodyConstraints.FreezePositionY;	//TODO: believe this is what is causing some people to penetrate the platform slightly (they must be reentering at wrong height)
 
 		if (status == PersonStatus.MovingToPlatform) {	//this will exclude compromised people
 			status = PersonStatus.ReadyToBoard;
-		} else if (status == PersonStatus.MovingToWaitingArea) {
-			status = PersonStatus.AtWaitingArea;
+		} else if (status == PersonStatus.MovingToFoyer) {
+			status = PersonStatus.AtFoyer;
 		}
 	}
 

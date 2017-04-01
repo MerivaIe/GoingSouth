@@ -20,9 +20,9 @@ public class PersonSpawner : MonoBehaviour {
 		foreach (Destination dest in GameManager.instance.destinations) {
 			if (IsTimeToSpawn (dest)) {
 				GameObject personGO = Instantiate (personPrefab, spawnPoints[Random.Range (0,spawnPoints.GetUpperBound (0))].transform.position, Quaternion.identity, organisingParent.transform) as GameObject;
-				//TODO: just set to foyer area... not platform
-				Vector3 platformPos = GameManager.instance.platforms.AllOptions [Random.Range (0, GameManager.instance.platforms.AvailableOptions.Count)].transform.position;	//set platform destination randomly from publically exposed platforms
-				personGO.GetComponent <Person> ().SetMovingToPlatform (platformPos);
+				Person person = personGO.GetComponent <Person> ();
+				person.SetMovingToWaitingArea (false,GameManager.instance.foyerGO.transform.position);
+				person.desiredDestination = dest;
 			}
 		}
 	}

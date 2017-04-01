@@ -13,11 +13,12 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 	public ExhaustibleList<Vector3> trainDockingPoints { get; private set; }
 	public List<Destination> destinations{ get; private set; }
 	public List<TimetableItem> timetable{ get; private set; }
-	public List<Material> defaultMaterialColors;
-	public int trainCount = 4;
-	public GameObject trainPrefab;
-	public float destructionInterval = 0.05f;
 	public Collider outOfStationTrigger { get; private set; }
+	public List<Material> defaultMaterialColors;	//set in Editor
+	public GameObject foyerGO;				//set in Editor
+	public int trainCount = 4;						//set in Editor
+	public GameObject trainPrefab;					//set in Editor
+	public float destructionInterval = 0.05f;		//set in Editor
 
 	private static GameManager s_Instance = null;
 	private List<GameObject> destructionQueue;
