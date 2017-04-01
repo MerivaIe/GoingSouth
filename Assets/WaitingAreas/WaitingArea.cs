@@ -9,14 +9,12 @@ public class WaitingArea : MonoBehaviour {
 	[Tooltip("MUST SET THIS MANUALLY AS NAVMESH API IS LACKING")]
 	public float nmAgentRadius = 0.5f;
 	public float waitSpacing = 1f;
-	public bool isPlatform { get; private set; }
 
 	private List<WaitLocation> waitLocations = new List<WaitLocation> ();
 	private Bounds waitAreaTriggerBounds;
 
 	void Start () {
 		waitAreaTriggerBounds = GetComponentInChildren<WaitingAreaTrigger>().gameObject.GetComponent <BoxCollider>().bounds;
-		isPlatform = GetComponent <Platform> ();
 	}
 
 	void CalculateNewWaitLocations(){	// a nice way of doing this would be to store old locations generated and workaround them

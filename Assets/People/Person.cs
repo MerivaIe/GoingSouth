@@ -13,7 +13,7 @@ public class Person : MonoBehaviour {
 	/// <summary>
 	/// PersonStatus: MovingToPlatform=nmAgent control to centre of platform | WrongPlatform=nmAgent control to waiting area | MovingToDoor=nmAgent control to one door location | Boarding=physics control avoidance of others
 	/// </summary>
-	public enum PersonStatus{MovingToPlatform,MovingToFoyer,ReadyToBoard,MovingToTrainDoor,BoardingTrain,FindingSeat,SatDown,Alighted,Compromised}
+	public enum PersonStatus{MovingToWaitingArea,AtWaitingArea,MovingToPlatform,ReadyToBoard,MovingToTrainDoor,BoardingTrain,FindingSeat,SatDown,Alighted,Compromised}
 	public PersonStatus status; 
 	public Destination desiredDestination{ get; private set; }
 	public float boardingForce = 20f, nudgeForce = 1f, checkingInterval = 0.5f,proximityDistance = 0.5f, centreOfMassYOffset = 0f;
@@ -61,7 +61,7 @@ public class Person : MonoBehaviour {
 	void CheckForTimetableChanges() {
 		if (desiredDestination.soonestTimetableItem != null && desiredDestination.soonestTimetableItem != myTargetTimetableItem) {
 			switch (status) {	//only statuses where person is at waiting area, moving to platform, or waiting at platform- any other statuses mean Person is already boarding train or compromised
-			case PersonStatus.MovingToFoyer:
+			case PersonStatus.MovingToWaitingArea:
 			case PersonStatus.MovingToPlatform:
 			case PersonStatus.ReadyToBoard:
 				myTargetTimetableItem = desiredDestination.soonestTimetableItem;
@@ -220,27 +220,24 @@ public class Person : MonoBehaviour {
 
 	public void OnHitGround() {
 		if (status != PersonStatus.Compromised) {	//TODO what if they hit ground from foyer rather than platform
-			Invoke("SetMovingToPlatform",2f);	//TODO: invoke after they have stood up
+			Invoke("SetMovingToPlatform",2f);		//TODO: invoke after they have stood up
 		}
 	}
 
-	public void OnWaitingAreaEnter(bool isPlatform, Vector3 waitLocation) {	
-		if (isPlatform) {
-			if (status == PersonStatus.MovingToPlatform) {	//this will exclude compromised people
-				platformTarget = waitLocation;
-				nmAgent.SetDestination (platformTarget);
-				rb.constraints = RigidbodyConstraints.FreezePositionY;	//TODO: believe this is what is causing some people to penetrate the platform slightly (they must be reentering at wrong height)
-				status = PersonStatus.ReadyToBoard;
-			}
-		} else {
-			//TODO: this needs to vary depending on whether entering a generic waiting area or a platform
+	public void OnWaitingAreaEnter(Vector3 waitLocation) {	
+		platformTarget = waitLocation;
+		nmAgent.SetDestination (platformTarget);
+		rb.constraints = RigidbodyConstraints.FreezePositionY;	//TODO: believe this is what is causing some people to penetrate the platform slightly (they must be reentering at wrong height)
+
+		if (status == PersonStatus.MovingToPlatform) {	//this will exclude compromised people
+			status = PersonStatus.ReadyToBoard;
+		} else if (status == PersonStatus.MovingToWaitingArea) {
+			status = PersonStatus.AtWaitingArea;
 		}
 	}
 
-	public void OnWaitingAreaExit(bool isPlatform) {
-		if (isPlatform) {
-			rb.constraints = RigidbodyConstraints.None;
-		}
+	public void OnWaitingAreaExit() {
+		rb.constraints = RigidbodyConstraints.None;
 	}
 
 	public void OnTrainEnter() {

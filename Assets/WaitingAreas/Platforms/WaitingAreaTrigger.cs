@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+[RequireComponent(typeof(BoxCollider))]
 public class WaitingAreaTrigger : MonoBehaviour {
 
 	private WaitingArea myWaitingArea;
@@ -14,7 +15,7 @@ public class WaitingAreaTrigger : MonoBehaviour {
 		Person person = coll.gameObject.GetComponent <Person> ();
 		if (person) {
 			Vector3 freeWaitLocation = myWaitingArea.RegisterPerson (person);
-			person.OnWaitingAreaEnter (myWaitingArea.isPlatform,freeWaitLocation);
+			person.OnWaitingAreaEnter (freeWaitLocation);
 		}
 	}
 
@@ -22,7 +23,7 @@ public class WaitingAreaTrigger : MonoBehaviour {
 		Person person = coll.gameObject.GetComponent <Person> ();
 		if (person) {
 			myWaitingArea.UnregisterPerson (person);
-			person.OnWaitingAreaExit (myWaitingArea.isPlatform);
+			person.OnWaitingAreaExit ();
 		}
 	}
 }
