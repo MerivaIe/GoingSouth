@@ -8,5 +8,5 @@ public class Signal : MonoBehaviour {
 
 	public SignalType signalType;
 
-	//TODO maybe on a signal change though you should reset triggers so that the TrainController here starts accelerating
+	//HIGH PRIORITY TODO maybe on a signal change though you should reset triggers so that the TrainController here starts accelerating
 }

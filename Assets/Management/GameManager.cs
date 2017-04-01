@@ -80,9 +80,9 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 			}
 
 			destinations = new List<Destination> ();
-			destinations.Add (new Destination ("Bristow", 200, 300));
-			destinations.Add (new Destination ("Lomdom", 70, 2000));
-			destinations.Add (new Destination ("Basimgstoke", 100, 1000));
+			destinations.Add (new Destination ("Bristow", 200,100));
+			destinations.Add (new Destination ("Lomdom", 70, 500));
+			destinations.Add (new Destination ("Basimgstoke", 100, 20));
 
 			timetable = new List<TimetableItem>();
 		}
@@ -98,13 +98,17 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 	}
 
 	public void AssignTrainToTimetableItem(int trainIndex, TimetableItem timetableItem) {
-		timetableItem.SetTrain (trainPool.AvailableOptions [trainIndex]);
-		trainPool.ExhaustOption (timetableItem.train);
+		Train train = trainPool.AvailableOptions [trainIndex];
+		timetableItem.SetTrain (train);
+		train.OnAssignedToTimetableItem (timetableItem);
+		trainPool.ExhaustOption (train);
 	}
 
 	public void AssignPlatformToTimetableItem(int platformIndex, TimetableItem timetableItem) {
-		timetableItem.SetPlatform (platforms.AvailableOptions [platformIndex]);
-		platforms.ExhaustOption (timetableItem.platform);
+		Platform platform = platforms.AvailableOptions [platformIndex];
+		timetableItem.SetPlatform (platform);
+		platform.OnAssignedToTimetableItem (timetableItem);
+		platforms.ExhaustOption (platform);
 		RecalculateSoonestTimetableItemForDestination (timetableItem.destination);
 	}
 
@@ -130,9 +134,9 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 	}
 
 	void RecalculateSoonestTimetableItemForDestination(Destination dest) {	//will only occur on platform assignment (ignore timetable items without platform assignments)
-		IEnumerable<TimetableItem> timetableByDestination = GameManager.instance.timetable.Where(t => t.destination == dest);	//collection of timetable items to this destination
-		if (timetableByDestination.Any ()) {																					//if no timetable items to this destination skip
-			dest.SetSoonestTimetableItem (timetableByDestination.MinBy (t => t.scheduledDepartureTime));						//if there are, retrieve the earliest one
+		IEnumerable<TimetableItem> timetableToDestination = GameManager.instance.timetable.Where(t => t.destination == dest);	//collection of timetable items to this destination
+		if (timetableToDestination.Any ()) {																					//if no timetable items to this destination skip
+			dest.SetSoonestTimetableItem (timetableToDestination.MinBy (t => t.scheduledDepartureTime));						//if there are, retrieve the earliest one
 		}
 	}
 }

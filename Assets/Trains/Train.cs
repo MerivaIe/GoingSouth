@@ -113,11 +113,11 @@ public class Train : MonoBehaviour {
 	}
 
 	void CheckIfClearToEnterStation() {	//called once at the end of journey duration (invoked in Depart) and every time the train is assigned to a new timetable item
-		if (journeyEndTime >= Time.time && myCurrentTimetableItem != null && myCurrentTimetableItem.platform) {
+		if (Time.time >= journeyEndTime && myCurrentTimetableItem != null && myCurrentTimetableItem.platform) {
 			SetTrainColor (myCurrentTimetableItem.destination.materialColor);
 
 			Vector3 trackPosition = transform.position;
-			trackPosition.z = myCurrentTimetableItem.platform.platformSignalBounds.center.z;
+			trackPosition.z = myCurrentTimetableItem.platform.platformSignalBounds.center.z + 1f;	//pivot of train is off centre by about 1 unit
 			transform.position = trackPosition;
 
 			direction = Vector3.right;
@@ -126,7 +126,8 @@ public class Train : MonoBehaviour {
 			journeyStartTime = 0f;
 			journeyEndTime = 0f;
 
-			//TODO lock down the timetable UI item
+			GameUIManager.instance.OnTrainEnterStation (myCurrentTimetableItem);	//fade out the timetable UI item
+			myCurrentTimetableItem = null;
 		}
 	}
 

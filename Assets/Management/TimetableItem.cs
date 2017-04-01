@@ -21,12 +21,9 @@ public class TimetableItem {
 
 	public void SetTrain(Train _train) {
 		train = _train;
-		//TODO: need to decide how something checks which current timetable the train is on
-		train.OnAssignedToTimetableItem (this);
 	}
 
 	public void SetPlatform (Platform _platform) {
 		platform = _platform;
-		platform.OnAssignedToTimetableItem (this);
 	}
 }

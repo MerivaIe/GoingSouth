@@ -19,9 +19,9 @@ public class TrainController : MonoBehaviour {
 		if (signal) {
 			switch (signal.signalType) {
 			case Signal.SignalType.Brake:
-				float signalEndX = coll.bounds.max.x;	//TODO this will be min different if the train is going the other way! Could just sample which is furthest away
+				float signalEndX = coll.bounds.max.x;	//TODO VERY LOW PRIORITY this will be min different if the train is going the other way! Could just sample which is furthest away
 				train.SetBraking (signalEndX);
-				//TODO: THE BELOW CODE IS TEMPORARY AND MESSY TO ENSURE THE TRAIN DOESNT BRAKE WHEN IT REENTERS SIGNAL ON ACCELERATION IN OPPOSIT DIRECTION
+				//TODO: HIGH PRIORITY: THE BELOW CODE IS TEMPORARY AND MESSY TO ENSURE THE TRAIN DOESNT BRAKE WHEN IT REENTERS SIGNAL ON ACCELERATION IN OPPOSIT DIRECTION
 				//SIGNALS WILL BE CHANGED MANUALLY EVENTUALLY
 				signal.signalType = Signal.SignalType.Accelerate;
 				break;

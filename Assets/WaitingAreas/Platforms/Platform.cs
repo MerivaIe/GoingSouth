@@ -10,6 +10,6 @@ public class Platform : MonoBehaviour {
 	}
 		
 	public void OnAssignedToTimetableItem(TimetableItem timetableItem) {
-		//TODO change colour of text being displayed and also the name of destination
+		//TODO: MEDIUM PRIORITY change colour of text being displayed and also the name of destination
 	}
 }

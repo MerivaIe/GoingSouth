@@ -185,11 +185,11 @@ public class GameUIManager : MonoBehaviour {
 		ReturnToDefaultOptionsMenu (itemModificationMenu);
 	}
 	public void OnClick_ConfirmModifiedItem() {
-		if (modification_trainDropdown.options.Count > 0) {		//ignore this dropdown if it didnt have anything in it
-			GameManager.instance.AssignTrainToTimetableItem (modification_trainDropdown.value,activeTimetableItem);	//Reference the train selected by player N.B this is premised upon the dropdown options being populated by Model lists (i.e.trains,platforms) above meaning indexes of dropdown/Model will be identical
-		}
 		if (modification_platformDropdown.options.Count > 0) {	//ignore this dropdown if it didnt have anything in it
 			GameManager.instance.AssignPlatformToTimetableItem (modification_platformDropdown.value,activeTimetableItem);	//Reference the platform selected by player N.B this is premised upon the dropdown options being populated by Model lists (i.e.trains,platforms) above meaning indexes of dropdown/Model will be identical
+		}
+		if (modification_trainDropdown.options.Count > 0) {		//ignore this dropdown if it didnt have anything in it
+			GameManager.instance.AssignTrainToTimetableItem (modification_trainDropdown.value,activeTimetableItem);	//Reference the train selected by player N.B this is premised upon the dropdown options being populated by Model lists (i.e.trains,platforms) above meaning indexes of dropdown/Model will be identical
 		}
 		TimetableItemUIObject timetableItemUIObject;
 		timetableUITracker.TryGetValueBySecond (activeTimetableItem, out timetableItemUIObject);
@@ -209,5 +209,13 @@ public class GameUIManager : MonoBehaviour {
 		activeTimetableItem.SetTrain (null);
 		timetableItemUIObject.trainText.text = "";
 		ReturnToDefaultOptionsMenu (itemModificationMenu);
+	}
+
+	//Timetable UI Item Deletion
+	public void OnTrainEnterStation(TimetableItem timetableItem) {
+		TimetableItemUIObject timetableItemUIObject;
+		timetableUITracker.TryGetValueBySecond (timetableItem, out timetableItemUIObject);
+		timetableItemUIObject.gameObject.GetComponent <Button>().interactable = false;
+		//TODO: MUST DO make it so that this fades out... animation moving to left
 	}
 }

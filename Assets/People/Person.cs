@@ -8,7 +8,6 @@ using MoreLinq;
 
 [RequireComponent(typeof(NavMeshAgent))]
 public class Person : MonoBehaviour {
-
 	public bool insideTrain {get; private set;}
 	/// <summary>
 	/// PersonStatus: MovingToPlatform=nmAgent control to centre of platform | WrongPlatform=nmAgent control to waiting area | MovingToDoor=nmAgent control to one door location | Boarding=physics control avoidance of others
@@ -28,7 +27,7 @@ public class Person : MonoBehaviour {
 	private bool boardUsingForce = false, atWaitingTarget = false;
 	private TimetableItem myTargetTimetableItem;
 
-	void Awake () {	//needs to be Awake because Start() is not called before methods on instantiated gameObject it seems
+	void Awake () {	//Awake used because Start() is not called before methods on instantiated gameObject it seems
 		rb = GetComponent <Rigidbody> ();
 		nmAgent = GetComponent <NavMeshAgent>();
 		nmObstacle = GetComponent <NavMeshObstacle> ();
@@ -43,7 +42,9 @@ public class Person : MonoBehaviour {
 		if (proximityAngles == null) {
 			GenerateFanAngles (5,90);
 		}
+	}
 
+	void Start() {	//we want timetable checking to start after instantiating class has set desiredDestination... calling this in Awake is too soon
 		InvokeRepeating ("CheckForTimetableChanges",0,checkingInterval * 10f);
 	}
 
@@ -70,7 +71,7 @@ public class Person : MonoBehaviour {
 				break;
 			}
 		} else if (desiredDestination.soonestTimetableItem == null && myTargetTimetableItem != null) {
-			//TODO: make UI call into GameManager to wipe soonestTimetableItem from destination if platform wiped... the people will pick this up
+			//TODO: MUST DO make UI call into GameManager to wipe soonestTimetableItem from destination if platform wiped... the people will pick this up
 		}
 	}
 
@@ -102,7 +103,7 @@ public class Person : MonoBehaviour {
 					nextCheckTime = Time.time + checkingInterval;
 				}
 				if (status == PersonStatus.BoardingTrain || boardUsingForce) {
-					rb.AddForce (boardingForce * boardingVectorNormalized, ForceMode.Acceleration);	//TODO: use the below but apply at transform.position at start of push and at transform.position + rb.centerOfMass at the end of the pushing... this will mean people are not flopping over at the start of pushing
+					rb.AddForce (boardingForce * boardingVectorNormalized, ForceMode.Acceleration);	//TODO: VERY LOW PRIORITY use the below but apply at transform.position at start of push and at transform.position + rb.centerOfMass at the end of the pushing... this will mean people are not flopping over at the start of pushing
 					//rb.AddForceAtPosition (boardingForce*boardingVector.normalized,transform.position,ForceMode.Acceleration);
 				} else {
 					rb.velocity = nmAgent.speed * boardingVectorNormalized;
@@ -119,7 +120,7 @@ public class Person : MonoBehaviour {
 					if (atWaitingTarget && nmAgent.enabled) {			//if under agent control and close to target: turn off agent
 						SetAgentControl (false);
 					} else if (!atWaitingTarget && !nmAgent.enabled) {	//else under physics control and not close: nudge towards target
-						rb.AddForce (toWaitingTarget.normalized * nudgeForce, ForceMode.Acceleration);	//TODO could improve performance further by setting direction just once? (normalized is heavy)
+						rb.AddForce (toWaitingTarget.normalized * nudgeForce, ForceMode.Acceleration);	//TODO VERY LOW PRIORITY could improve performance further by setting direction just once? (normalized is heavy)
 					}
 				}
 			}
@@ -213,16 +214,16 @@ public class Person : MonoBehaviour {
 		SetMovingToWaitingArea (isPlatform,waitingTarget);
 	}
 
-	public void OnHitGround() {				//make the person return to their waiting area
-		if (status != PersonStatus.Compromised) {	//TODO what if they hit ground from foyer rather than platform
-			Invoke("SetMovingToWaitingArea",2f);		//TODO: invoke after they have stood up
+	public void OnHitGround() {						//make the person return to their waiting area
+		if (status != PersonStatus.Compromised) {
+			Invoke("SetMovingToWaitingArea",2f);	//TODO: LOW PRIORITY invoke after they have stood up
 		}
 	}
 
 	public void OnWaitingAreaEnter(Vector3 waitLocation) {	
 		waitingTarget = waitLocation;
 		nmAgent.SetDestination (waitingTarget);
-		rb.constraints = RigidbodyConstraints.FreezePositionY;	//TODO: believe this is what is causing some people to penetrate the platform slightly (they must be reentering at wrong height)
+		rb.constraints = RigidbodyConstraints.FreezePositionY;	//TODO: MEDIUM PRIORITY believe this is what is causing some people to penetrate the platform slightly (they must be reentering at wrong height)
 
 		if (status == PersonStatus.MovingToPlatform) {	//this will exclude compromised people
 			status = PersonStatus.ReadyToBoard;
