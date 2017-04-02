@@ -116,8 +116,13 @@ public class Train : MonoBehaviour {
 		if (Time.time >= journeyEndTime && myCurrentTimetableItem != null && myCurrentTimetableItem.platform) {
 			SetTrainColor (myCurrentTimetableItem.destination.materialColor);
 
+			float localScaleZ = myCurrentTimetableItem.platform.isLeftHanded ? 1f : -1f;	//set the train to be left or right handed according to platform
+			Vector3 newScale = transform.localScale;
+			newScale.z = localScaleZ;
+			transform.localScale = newScale;
+
 			Vector3 trackPosition = transform.position;
-			trackPosition.z = myCurrentTimetableItem.platform.platformSignalTrigger.bounds.center.z + 1f;	//pivot of train is off centre by about 1 unit
+			trackPosition.z = myCurrentTimetableItem.platform.platformSignalTrigger.bounds.center.z + localScaleZ;	//pivot of train is off centre by about 1 unit
 			transform.position = trackPosition;
 
 			direction = Vector3.right;
