@@ -117,7 +117,7 @@ public class Train : MonoBehaviour {
 			SetTrainColor (myCurrentTimetableItem.destination.materialColor);
 
 			Vector3 trackPosition = transform.position;
-			trackPosition.z = myCurrentTimetableItem.platform.platformSignalBounds.center.z + 1f;	//pivot of train is off centre by about 1 unit
+			trackPosition.z = myCurrentTimetableItem.platform.platformSignalTrigger.bounds.center.z + 1f;	//pivot of train is off centre by about 1 unit
 			transform.position = trackPosition;
 
 			direction = Vector3.right;
