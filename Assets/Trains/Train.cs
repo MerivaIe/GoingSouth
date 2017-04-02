@@ -127,7 +127,6 @@ public class Train : MonoBehaviour {
 			journeyEndTime = 0f;
 
 			GameUIManager.instance.OnTrainEnterStation (myCurrentTimetableItem);	//fade out the timetable UI item
-			myCurrentTimetableItem = null;
 		}
 	}
 
@@ -147,6 +146,7 @@ public class Train : MonoBehaviour {
 
 	public void OnEnterOutOfStationTrigger() {	//reset most things apart from journey time etc.
 		if (status == TrainStatus.Departing) {
+			myCurrentTimetableItem = null;
 			GameManager.instance.AddObjectsToDeletionQueue (peopleOnBoard.Select (p => p.gameObject).ToList ());
 			peopleOnBoard.Clear ();
 			status = TrainStatus.Parked;
