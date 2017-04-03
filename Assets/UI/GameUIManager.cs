@@ -8,12 +8,14 @@ public class GameUIManager : MonoBehaviour {
 
 	public GameObject timetableItemsParent;
 	public GameObject timetableItemPrefab;
+	public GameObject trainTrackerParent;
+	public GameObject trainTrackerPrefab;
 	[Range(0.02f,1f)]
 	public float displayUpdateInterval = 0.5f;
 	public Sprite trainUISprite;
 
 	private BiLookup<TimetableItemUIObject,TimetableItem> timetableUITracker;
-	private Dictionary<Slider,Train> trainUITracker;	//stored in a dic in case we need to use lookup in future, atm though it is only used in a full foreach loop over this dic to update sliders
+	private Dictionary<TrainTrackerUIObject,Train> trainUITracker;	//stored in a dic in case we need to use lookup in future, atm though it is only used in a full foreach loop over this dic to update sliders
 	private GameObject defaultOptionsMenu, itemCreationMenu, itemModificationMenu;
 	private Dropdown creation_destinationDropdown, modification_trainDropdown, modification_platformDropdown;
 	private Text clockText,creation_schedDepartureTimeText, modification_schedDepartureTimeText, modification_DestinationText;
@@ -45,21 +47,19 @@ public class GameUIManager : MonoBehaviour {
 	}
 
 	void Start () {				//must be after GameManager's Awake()
-		timetableUITracker =  new BiLookup<TimetableItemUIObject, TimetableItem> ();
-		trainUITracker = new Dictionary<Slider, Train> ();	
+		timetableUITracker = new BiLookup<TimetableItemUIObject, TimetableItem> ();
+		trainUITracker = new Dictionary<TrainTrackerUIObject, Train> ();	
 
-		if (timetableItemPrefab == null || timetableItemsParent == null) {
-			Debug.LogWarning ("No timetable item prefab and/or the parent object for them assigned. Please do so.");
+		if (timetableItemPrefab == null || timetableItemsParent == null || trainTrackerParent == null || trainTrackerPrefab == null) {
+			Debug.LogWarning ("No timetable/train tracker item prefab and/or the parent object for them assigned.");
 		}
 
-		Slider[] sliders = GameObject.FindObjectsOfType <Slider> ();	//use this for now just to get sliders, but eventually you should create sliders from a prefab.. one for each train
 		if (GameManager.instance.trainPool.AvailableOptions == null || GameManager.instance.trainPool.AvailableOptions.Count == 0) {
 			Debug.LogWarning ("GameUIManager is trying to access GameManager's train pool but it is not initialised or empty.");
 		} else {
-			int i = 0;
 			foreach (Train train in GameManager.instance.trainPool.AvailableOptions) {
-				trainUITracker.Add (sliders[i],train);
-				i++;
+				GameObject trainTracker = Instantiate (trainTrackerPrefab, trainTrackerParent.transform) as GameObject;
+				trainUITracker.Add (trainTracker.GetComponent <TrainTrackerUIObject>(),train);
 			}
 		}
 
@@ -81,7 +81,17 @@ public class GameUIManager : MonoBehaviour {
 		itemCreationMenu.SetActive (false);	//finally hide the non-default menus
 		itemModificationMenu.SetActive (false);
 
-		InvokeRepeating ("UpdateDisplay",0f,displayUpdateInterval);		//start a repeating invoke that updates the display at interval
+		InvokeRepeating ("UpdateDisplayAtInterval",0f,displayUpdateInterval);		//start a repeating invoke that updates the display at interval for those UI items that don't need update per frame
+	}
+
+	void Update() {
+		foreach (KeyValuePair<TrainTrackerUIObject,Train> trainUIPair in trainUITracker) {
+			trainUIPair.Key.slider.value = trainUIPair.Value.GetJourneyProgress ();
+		}
+	}
+		
+	void UpdateDisplayAtInterval() {	//called every displayUpdateInterval seconds
+		clockText.text = ConvertGameTimeToHHMM (GameManager.instance.GetCurrentGameTime());
 	}
 
 	GameObject MyFindUIObjectWithTag(string searchForTag) {
@@ -90,13 +100,6 @@ public class GameUIManager : MonoBehaviour {
 			Debug.LogWarning ("Could not find UI game object with tag: " + searchForTag + ". Display will not function as expected. Ensure all UI objects are active at game start.");
 		}
 		return foundGameObject;
-	}
-	
-	void UpdateDisplay() {	//called every x seconds
-		foreach (KeyValuePair<Slider,Train> trainUIItem in trainUITracker) {
-			trainUIItem.Key.value = trainUIItem.Value.GetJourneyProgress ();
-		}
-		clockText.text = ConvertGameTimeToHHMM (GameManager.instance.GetCurrentGameTime());
 	}
 
 	public static string ConvertGameTimeToHHMM(float gameTime) {
