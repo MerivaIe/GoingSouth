@@ -15,7 +15,7 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 	public List<TimetableItem> timetable{ get; private set; }
 	public Collider outOfStationTrigger { get; private set; }
 	public List<Material> defaultMaterialColors;	//set in Editor
-	public GameObject foyerGO;				//set in Editor
+	public GameObject foyerGO;						//set in Editor
 	public int trainCount = 4;						//set in Editor
 	public GameObject trainPrefab;					//set in Editor
 	public float destructionInterval = 0.05f;		//set in Editor
@@ -118,11 +118,23 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 		timetable.Add (timetableItem);
 	}
 
+	public void WipeTimetableItemPlatformAndTrain(TimetableItem timetableItem) {
+		timetableItem.SetTrain (null);
+		timetableItem.SetPlatform (null);
+		//for future reference: do not need to RestoreOption for train or platform because they are restored when item is first selected for modification, if it is then wiped they will stay restored!
+		RecalculateSoonestTimetableItemForDestination (timetableItem.destination);
+	}
+
 	public void AddObjectsToDeletionQueue(List<GameObject> gameObjectToDelete) {
 		destructionQueue.AddRange (gameObjectToDelete);
 		if (!IsInvoking ("DestroyObjectsInQueue")) {
 			InvokeRepeating ("DestroyObjectsInQueue", 0f, destructionInterval);
 		}
+	}
+
+	public void OnTrainOutOfStation(TimetableItem timetableItem) {
+		trainPool.RestoreOption (timetableItem.train);
+		platforms.RestoreOption (timetableItem.platform);
 	}
 
 	void DestroyObjectsInQueue() {

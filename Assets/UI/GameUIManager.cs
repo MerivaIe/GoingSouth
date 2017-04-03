@@ -204,10 +204,10 @@ public class GameUIManager : MonoBehaviour {
 	public void OnClick_WipeModifiedItem() {
 		TimetableItemUIObject timetableItemUIObject;
 		timetableUITracker.TryGetValueBySecond (activeTimetableItem, out timetableItemUIObject);
-		activeTimetableItem.SetPlatform (null);
 		timetableItemUIObject.platformText.text = "";
-		activeTimetableItem.SetTrain (null);
 		timetableItemUIObject.trainText.text = "";
+		GameManager.instance.WipeTimetableItemPlatformAndTrain (activeTimetableItem);
+
 		ReturnToDefaultOptionsMenu (itemModificationMenu);
 	}
 
@@ -215,7 +215,11 @@ public class GameUIManager : MonoBehaviour {
 	public void OnTrainEnterStation(TimetableItem timetableItem) {
 		TimetableItemUIObject timetableItemUIObject;
 		timetableUITracker.TryGetValueBySecond (timetableItem, out timetableItemUIObject);
-		timetableItemUIObject.gameObject.GetComponent <Button>().interactable = false;
-		//TODO: MUST DO make it so that this fades out... animation moving to left
+		if (timetableItemUIObject) {
+			timetableItemUIObject.GetComponent <Button> ().interactable = false;
+			Animator animator = timetableItemUIObject.GetComponent <Animator> ();
+			animator.SetTrigger ("FadeOutTrigger");
+			Destroy (timetableItemUIObject.gameObject,animator.GetCurrentAnimatorStateInfo (0).length);
+		}
 	}
 }

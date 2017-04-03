@@ -70,7 +70,7 @@ public class Person : MonoBehaviour {
 				SetMovingToWaitingArea (true,myTargetTimetableItem.platform.transform.position);
 				break;
 			}
-		} else if (desiredDestination.soonestTimetableItem == null && myTargetTimetableItem != null) {
+		} else if (desiredDestination.soonestTimetableItem == null && myTargetTimetableItem != null) {	//if platform has been deselected or timetable item already satisfied before Person could reach the train
 			//TODO: MUST DO make UI call into GameManager to wipe soonestTimetableItem from destination if platform wiped... the people will pick this up
 		}
 	}
@@ -222,6 +222,7 @@ public class Person : MonoBehaviour {
 
 	public void OnWaitingAreaEnter(Vector3 waitLocation) {	
 		waitingTarget = waitLocation;
+		SetAgentControl (true);	//we were getting some people under physics control entering waiting areas and trying to SetDestination
 		nmAgent.SetDestination (waitingTarget);
 		rb.constraints = RigidbodyConstraints.FreezePositionY;	//TODO: MEDIUM PRIORITY believe this is what is causing some people to penetrate the platform slightly (they must be reentering at wrong height)
 

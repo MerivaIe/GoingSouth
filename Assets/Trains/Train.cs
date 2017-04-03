@@ -151,6 +151,7 @@ public class Train : MonoBehaviour {
 
 	public void OnEnterOutOfStationTrigger() {	//reset most things apart from journey time etc.
 		if (status == TrainStatus.Departing) {
+			GameManager.instance.OnTrainOutOfStation (myCurrentTimetableItem);
 			myCurrentTimetableItem = null;
 			GameManager.instance.AddObjectsToDeletionQueue (peopleOnBoard.Select (p => p.gameObject).ToList ());
 			peopleOnBoard.Clear ();
@@ -179,12 +180,6 @@ public class Train : MonoBehaviour {
 			peopleOnBoard.Remove (person);
 		} catch {
 			Debug.LogError ("Could not find expected person in list of onboard people.");
-		}
-	}
-
-	void OnDrawGizmos() {
-		if (accelerationTargetX != 0f) {
-			Gizmos.DrawSphere (new Vector3(accelerationTargetX,transform.position.y,transform.position.z), 0.5f);
 		}
 	}
 }
