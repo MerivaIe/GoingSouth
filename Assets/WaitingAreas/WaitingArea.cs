@@ -42,10 +42,22 @@ public class WaitingArea : MonoBehaviour {
 	}
 
 	public void UnregisterPerson(Person person) {
-		try {
-			waitLocations.First(a => a.person == person).person = null;	//set person = null for this waitLocation
-		} catch {
-			Debug.LogError ("Could not find expected person in platform list.");
+		WaitLocation waitLocation = waitLocations.FirstOrDefault(w => w.person == person);
+		if (waitLocation == null) {
+			Debug.LogError ("Could not find expected person in platform list to unregister.");
+		} else {
+			waitLocation.person = null;	//set person = null for this waitLocation
+		}
+	}
+
+	public bool GetPersonsWaitLocation(Person personToSearchFor, out Vector3 waitPosition) {
+		WaitLocation waitLocation = waitLocations.FirstOrDefault (w => w.person = personToSearchFor);
+		if (waitLocation != null) {
+			waitPosition = waitLocation.position;
+			return true;
+		} else {
+			waitPosition = Vector3.zero;
+			return false;
 		}
 	}
 

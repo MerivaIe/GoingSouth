@@ -82,7 +82,8 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 			destinations = new List<Destination> ();
 			destinations.Add (new Destination ("Bristow", 200,100));
 			destinations.Add (new Destination ("Lomdom", 70, 500));
-			destinations.Add (new Destination ("Basimgstoke", 100, 20));
+			destinations.Add (new Destination ("Basimgstoke", 100, 100));
+			destinations.Add (new Destination ("Edimburgh", 500, 20));	//takes long time so you want to wait for people to build up
 
 			timetable = new List<TimetableItem>();
 		}
@@ -122,7 +123,22 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 		timetableItem.SetTrain (null);
 		timetableItem.SetPlatform (null);
 		//for future reference: do not need to RestoreOption for train or platform because they are restored when item is first selected for modification, if it is then wiped they will stay restored!
+		RecalculateSoonestTimetableItemForDestination (timetableItem.destination);	//will set it to null unless there is another timetable item for this dest with a platform assignment
+	}
+		
+	public void OnTrainOutOfStation(TimetableItem timetableItem) {
+		trainPool.RestoreOption (timetableItem.train);
+		platforms.RestoreOption (timetableItem.platform);
 		RecalculateSoonestTimetableItemForDestination (timetableItem.destination);
+	}
+
+	void RecalculateSoonestTimetableItemForDestination(Destination dest) {
+		IEnumerable<TimetableItem> timetableToDestination = GameManager.instance.timetable.Where(t => t.destination == dest && t.platform != null);	//collection of timetable items to this destination that have a platform assigned
+		if (timetableToDestination.Any ()) {																					//if no timetable items to this destination skip
+			dest.SetSoonestTimetableItem (timetableToDestination.MinBy (t => t.scheduledDepartureTime));						//if there are, retrieve the earliest one
+		} else {
+			dest.SetSoonestTimetableItem (null);
+		}
 	}
 
 	public void AddObjectsToDeletionQueue(List<GameObject> gameObjectToDelete) {
@@ -132,23 +148,11 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 		}
 	}
 
-	public void OnTrainOutOfStation(TimetableItem timetableItem) {
-		trainPool.RestoreOption (timetableItem.train);
-		platforms.RestoreOption (timetableItem.platform);
-	}
-
 	void DestroyObjectsInQueue() {
 		if (destructionQueue.Count >= 0) {
 			CancelInvoke ();
 		} else {
 			GameObject.Destroy (destructionQueue[0]);
-		}
-	}
-
-	void RecalculateSoonestTimetableItemForDestination(Destination dest) {	//will only occur on platform assignment (ignore timetable items without platform assignments)
-		IEnumerable<TimetableItem> timetableToDestination = GameManager.instance.timetable.Where(t => t.destination == dest);	//collection of timetable items to this destination
-		if (timetableToDestination.Any ()) {																					//if no timetable items to this destination skip
-			dest.SetSoonestTimetableItem (timetableToDestination.MinBy (t => t.scheduledDepartureTime));						//if there are, retrieve the earliest one
 		}
 	}
 }

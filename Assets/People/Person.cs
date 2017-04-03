@@ -60,18 +60,30 @@ public class Person : MonoBehaviour {
 	}
 
 	void CheckForTimetableChanges() {
-		if (desiredDestination.soonestTimetableItem != null && desiredDestination.soonestTimetableItem != myTargetTimetableItem) {
-			switch (status) {	//only statuses where person is at waiting area, moving to platform, or waiting at platform- any other statuses mean Person is already boarding train or compromised
-			case PersonStatus.MovingToFoyer:
-			case PersonStatus.AtFoyer:
-			case PersonStatus.MovingToPlatform:
-			case PersonStatus.ReadyToBoard:
-				myTargetTimetableItem = desiredDestination.soonestTimetableItem;
-				SetMovingToWaitingArea (true,myTargetTimetableItem.platform.transform.position);
-				break;
+		if (desiredDestination.soonestTimetableItem != null) {
+			if (desiredDestination.soonestTimetableItem != myTargetTimetableItem) {
+				switch (status) {	//only statuses where person is at waiting area, moving to platform, or waiting at platform- any other statuses mean Person is already boarding train or compromised
+				case PersonStatus.MovingToFoyer:
+				case PersonStatus.AtFoyer:
+				case PersonStatus.MovingToPlatform:
+				case PersonStatus.ReadyToBoard:
+					myTargetTimetableItem = desiredDestination.soonestTimetableItem;
+					SetMovingToWaitingArea (true, myTargetTimetableItem.platform.transform.position);
+					break;
+				}
 			}
-		} else if (desiredDestination.soonestTimetableItem == null && myTargetTimetableItem != null) {	//if platform has been deselected or timetable item already satisfied before Person could reach the train
-			//TODO: MUST DO make UI call into GameManager to wipe soonestTimetableItem from destination if platform wiped... the people will pick this up
+		} else {	//else destination's soonest timetable item is null but this Person has a target timetable item set
+			if (myTargetTimetableItem != null) {	//...it means platform has been deselected or timetable item already satisfied before Person could reach the train
+				myTargetTimetableItem = null;
+				Vector3 newTarget;
+				if (GameManager.instance.foyerGO.GetComponent <WaitingArea> ().GetPersonsWaitLocation (this, out newTarget)) {
+					//if this person is in the foyer already then this will retrieve their wait location, and then we just reset them by calling OnWaitingAreaEnter again
+					status = PersonStatus.MovingToFoyer;
+					OnWaitingAreaEnter (newTarget);
+				} else {	//outside the foyer so just retarget the foyer
+					SetMovingToWaitingArea (false, GameManager.instance.foyerGO.transform.position);
+				}
+			}
 		}
 	}
 
@@ -213,13 +225,7 @@ public class Person : MonoBehaviour {
 		bool isPlatform = !(status == PersonStatus.AtFoyer || status == PersonStatus.MovingToFoyer);
 		SetMovingToWaitingArea (isPlatform,waitingTarget);
 	}
-
-	public void OnHitGround() {						//make the person return to their waiting area
-		if (status != PersonStatus.Compromised) {
-			Invoke("SetMovingToWaitingArea",2f);	//TODO: LOW PRIORITY invoke after they have stood up
-		}
-	}
-
+		
 	public void OnWaitingAreaEnter(Vector3 waitLocation) {	
 		waitingTarget = waitLocation;
 		SetAgentControl (true);	//we were getting some people under physics control entering waiting areas and trying to SetDestination
@@ -235,6 +241,12 @@ public class Person : MonoBehaviour {
 
 	public void OnWaitingAreaExit() {
 		rb.constraints = RigidbodyConstraints.None;
+	}
+
+	public void OnHitGround() {						//make the person return to their waiting area
+		if (status != PersonStatus.Compromised) {
+			Invoke("SetMovingToWaitingArea",2f);	//TODO: LOW PRIORITY invoke after they have stood up
+		}
 	}
 
 	public void OnTrainEnter() {
