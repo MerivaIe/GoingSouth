@@ -211,12 +211,19 @@ public class GameUIManager : MonoBehaviour {
 		ReturnToDefaultOptionsMenu (itemModificationMenu);
 	}
 
-	//Timetable UI Item Deletion
+	//Timetable UI Item Deletion/FadeOut
 	public void OnTrainEnterStation(TimetableItem timetableItem) {
 		TimetableItemUIObject timetableItemUIObject;
 		timetableUITracker.TryGetValueBySecond (timetableItem, out timetableItemUIObject);
 		if (timetableItemUIObject) {
-			timetableItemUIObject.GetComponent <Button> ().interactable = false;
+			Button button =	timetableItemUIObject.GetComponent <Button> ();
+			button.interactable = false;
+		}
+	}
+	public void OnTrainOutOfStation(TimetableItem timetableItem) {
+		TimetableItemUIObject timetableItemUIObject;
+		timetableUITracker.TryGetValueBySecond (timetableItem, out timetableItemUIObject);
+		if (timetableItemUIObject) {
 			Animator animator = timetableItemUIObject.GetComponent <Animator> ();
 			animator.SetTrigger ("FadeOutTrigger");
 			Destroy (timetableItemUIObject.gameObject,animator.GetCurrentAnimatorStateInfo (0).length);

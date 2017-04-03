@@ -150,7 +150,8 @@ public class Train : MonoBehaviour {
 	}
 
 	public void OnEnterOutOfStationTrigger() {	//reset most things apart from journey time etc.
-		if (status == TrainStatus.Departing) {
+		if (status == TrainStatus.Departing) {	//only want to trigger trains leaving station: Departing status will exclude trains that are inbound to station if they happen to hit the trigger
+			GameUIManager.instance.OnTrainOutOfStation(myCurrentTimetableItem);
 			GameManager.instance.OnTrainOutOfStation (myCurrentTimetableItem);
 			myCurrentTimetableItem = null;
 			GameManager.instance.AddObjectsToDeletionQueue (peopleOnBoard.Select (p => p.gameObject).ToList ());
