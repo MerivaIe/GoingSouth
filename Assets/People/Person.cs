@@ -12,7 +12,7 @@ public class Person : MonoBehaviour {
 	/// <summary>
 	/// PersonStatus: MovingToPlatform=nmAgent control to centre of platform | WrongPlatform=nmAgent control to waiting area | MovingToDoor=nmAgent control to one door location | Boarding=physics control avoidance of others
 	/// </summary>
-	public enum PersonStatus{MovingToFoyer,AtFoyer,MovingToPlatform,ReadyToBoard,MovingToTrainDoor,BoardingTrain,FindingSeat,SatDown,Alighted,Compromised}
+	public enum PersonStatus{MovingToFoyer,AtFoyer,MovingToPlatform,ReadyToBoard,MovingToTrainDoor,BoardingTrain,FindingSeat,SatDown,Compromised}
 	public PersonStatus status;
 	public Destination desiredDestination;
 	public float boardingForce = 20f, nudgeForce = 1f, checkingInterval = 0.5f,proximityDistance = 0.5f, centreOfMassYOffset = 0f;
@@ -21,7 +21,8 @@ public class Person : MonoBehaviour {
 	private NavMeshAgent nmAgent;
 	private NavMeshObstacle nmObstacle;
 	private Rigidbody rb;
-	private Vector3 waitingTarget, trainTarget, toWaitingTarget;
+	private WaitingArea targetWaitingArea;
+	private Vector3 waitingTarget, trainTarget, toWaitingTarget;	//different wait and train targets so that
 	private static float[] proximityAngles;
 	private float nextCheckTime = 0f;
 	private bool boardUsingForce = false, atWaitingTarget = false;
@@ -66,22 +67,33 @@ public class Person : MonoBehaviour {
 				case PersonStatus.MovingToFoyer:
 				case PersonStatus.AtFoyer:
 				case PersonStatus.MovingToPlatform:
+					myTargetTimetableItem = desiredDestination.soonestTimetableItem;
+					SetMovingToWaitingArea (true, myTargetTimetableItem.platform.waitingArea);
+					break;
 				case PersonStatus.ReadyToBoard:
 					myTargetTimetableItem = desiredDestination.soonestTimetableItem;
-					SetMovingToWaitingArea (true, myTargetTimetableItem.platform.transform.position);
+					if (myTargetTimetableItem.platform.waitingArea.IsPersonRegistered (this)) {	//if already at platform then perform the following inefficient reset
+						myTargetTimetableItem.platform.waitingArea.UnregisterPerson (this);
+						status = PersonStatus.MovingToPlatform;
+						OnWaitingAreaEnter (myTargetTimetableItem.platform.waitingArea);
+					} else {
+						SetMovingToWaitingArea (true, myTargetTimetableItem.platform.waitingArea);
+					}
 					break;
 				}
 			}
 		} else {	//else destination's soonest timetable item is null but this Person has a target timetable item set
-			if (myTargetTimetableItem != null) {	//...it means platform has been deselected or timetable item already satisfied before Person could reach the train
-				myTargetTimetableItem = null;
-				Vector3 newTarget;
-				if (GameManager.instance.foyerGO.GetComponent <WaitingArea> ().GetPersonsWaitLocation (this, out newTarget)) {
-					//if this person is in the foyer already then this will retrieve their wait location, and then we just reset them by calling OnWaitingAreaEnter again
-					status = PersonStatus.MovingToFoyer;
-					OnWaitingAreaEnter (newTarget);
-				} else {	//outside the foyer so just retarget the foyer
-					SetMovingToWaitingArea (false, GameManager.instance.foyerGO.transform.position);
+			if (status != PersonStatus.SatDown && status != PersonStatus.Compromised) {	//(people on train or compromised should ignore)
+				if (myTargetTimetableItem != null) {	//...it means platform has been deselected or timetable item already satisfied before Person could reach the train
+					myTargetTimetableItem = null;
+					if (GameManager.instance.foyer.IsPersonRegistered (this)) {	//if person already in foyer then perform series of fairly inefficient resetting steps
+						GameManager.instance.foyer.UnregisterPerson (this);
+						status = PersonStatus.MovingToFoyer;
+						targetWaitingArea = GameManager.instance.foyer;
+						OnWaitingAreaEnter (GameManager.instance.foyer);
+					} else {	//else person is outside the foyer so just retarget the foyer
+						SetMovingToWaitingArea (false, GameManager.instance.foyer);
+					}
 				}
 			}
 		}
@@ -122,7 +134,7 @@ public class Person : MonoBehaviour {
 				}
 			} else { //catches all other TRAIN statuses
 				if (status == PersonStatus.MovingToTrainDoor || status == PersonStatus.BoardingTrain) {	//pick up anyone who failed to board train
-					status = PersonStatus.ReadyToBoard;
+					status = PersonStatus.ReadyToBoard;	//TODO: URGENT I do not think this is required now that in CheckForTimetableChanges it will send people back to foyer
 				}
 				if (status == PersonStatus.ReadyToBoard) {
 					// could add an interval to this check if this is too heavy on performance (i.e. 'if (Time.time > nextCheckTime) {')
@@ -177,15 +189,6 @@ public class Person : MonoBehaviour {
 		trainTarget = doorLocations[closestTargetIndex];
 	}
 
-	public void OnHitTrain() {
-		if (status != PersonStatus.Compromised) {
-			status = PersonStatus.Compromised;
-			SetAgentControl (false);
-			rb.ResetCenterOfMass ();
-			rb.constraints = RigidbodyConstraints.None;
-		}
-	}
-
 	public void OnDoorEnter(Vector3 doorCentre) {
 		if (status == PersonStatus.FindingSeat) {	//person is being pushed back out of train so make them apply boarding force again TODO: non-critical: this doesnt work if nearly all people board from one side
 			Vector3 offset = transform.position - doorCentre;
@@ -215,37 +218,51 @@ public class Person : MonoBehaviour {
 		status = PersonStatus.SatDown;
 	}
 
-	public void SetMovingToWaitingArea(bool isPlatform, Vector3 optionalWaitingTarget) {
+	public void SetMovingToWaitingArea(bool isPlatform, WaitingArea waitingArea) {
 		SetAgentControl (true);	//may jerk them up... change this to after a recovery period once they have stood up?
-		waitingTarget = optionalWaitingTarget;
-		nmAgent.SetDestination (waitingTarget);
+		targetWaitingArea = waitingArea;
+		nmAgent.SetDestination (waitingArea.waitAreaTriggerBounds.center);
 		status = isPlatform? PersonStatus.MovingToPlatform : PersonStatus.MovingToFoyer;	
 	}
-	public void SetMovingToWaitingArea() {	//this exists purely so that this function can be invoked by OnHitGround()
+	public void SetMovingToWaitingArea() {	//this exists purely so that this function can be invoked by OnHitGround() [targetWaitingArea will already have been set if someone hits ground]
 		bool isPlatform = !(status == PersonStatus.AtFoyer || status == PersonStatus.MovingToFoyer);
-		SetMovingToWaitingArea (isPlatform,waitingTarget);
+		SetMovingToWaitingArea (isPlatform,targetWaitingArea);
 	}
 		
-	public void OnWaitingAreaEnter(Vector3 waitLocation) {	
-		waitingTarget = waitLocation;
-		SetAgentControl (true);	//we were getting some people under physics control entering waiting areas and trying to SetDestination
-		nmAgent.SetDestination (waitingTarget);
-		rb.constraints = RigidbodyConstraints.FreezePositionY;	//TODO: MEDIUM PRIORITY believe this is what is causing some people to penetrate the platform slightly (they must be reentering at wrong height)
+	public void OnWaitingAreaEnter(WaitingArea waitingAreaEnterred) {
+		if (waitingAreaEnterred == targetWaitingArea) {
+			waitingTarget = waitingAreaEnterred.RegisterPersonForWaiting (this);
+			SetAgentControl (true);	//we were getting some people under physics control entering waiting areas and trying to SetDestination
+			nmAgent.SetDestination (waitingTarget);
+			rb.constraints = RigidbodyConstraints.FreezePositionY;	//TODO: MEDIUM PRIORITY believe this is what is causing some people to penetrate the platform slightly (they must be reentering at wrong height)
 
-		if (status == PersonStatus.MovingToPlatform) {	//this will exclude compromised people
-			status = PersonStatus.ReadyToBoard;
-		} else if (status == PersonStatus.MovingToFoyer) {
-			status = PersonStatus.AtFoyer;
+			if (status == PersonStatus.MovingToPlatform) {	//this will exclude compromised people
+				status = PersonStatus.ReadyToBoard;
+			} else if (status == PersonStatus.MovingToFoyer) {
+				status = PersonStatus.AtFoyer;
+			}
+		} else {
+			waitingAreaEnterred.RegisterPersonPassingThrough (this);
 		}
 	}
 
-	public void OnWaitingAreaExit() {
+	public void OnWaitingAreaExit(WaitingArea waitingArea) {
+		waitingArea.UnregisterPerson (this);
 		rb.constraints = RigidbodyConstraints.None;
 	}
 
 	public void OnHitGround() {						//make the person return to their waiting area
 		if (status != PersonStatus.Compromised) {
 			Invoke("SetMovingToWaitingArea",2f);	//TODO: LOW PRIORITY invoke after they have stood up
+		}
+	}
+
+	public void OnHitTrain() {
+		if (status != PersonStatus.Compromised) {
+			status = PersonStatus.Compromised;
+			SetAgentControl (false);
+			rb.ResetCenterOfMass ();
+			rb.constraints = RigidbodyConstraints.None;
 		}
 	}
 

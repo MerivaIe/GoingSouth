@@ -14,16 +14,14 @@ public class WaitingAreaTrigger : MonoBehaviour {
 	void OnTriggerEnter (Collider coll) {
 		Person person = coll.gameObject.GetComponent <Person> ();
 		if (person) {
-			Vector3 freeWaitLocation = myWaitingArea.RegisterPerson (person);
-			person.OnWaitingAreaEnter (freeWaitLocation);
+			person.OnWaitingAreaEnter (myWaitingArea);
 		}
 	}
 
 	void OnTriggerExit (Collider coll) {
 		Person person = coll.gameObject.GetComponent <Person> ();
 		if (person) {
-			myWaitingArea.UnregisterPerson (person);
-			person.OnWaitingAreaExit ();
+			person.OnWaitingAreaExit (myWaitingArea);
 		}
 	}
 }

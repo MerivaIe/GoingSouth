@@ -22,7 +22,7 @@ public class PersonSpawner : MonoBehaviour {
 				GameObject personGO = Instantiate (personPrefab, spawnPoints[Random.Range (0,spawnPoints.GetUpperBound (0))].transform.position, Quaternion.identity, organisingParent.transform) as GameObject;
 				personGO.GetComponent <MeshRenderer>().sharedMaterial = dest.materialColor;
 				Person person = personGO.GetComponent <Person> ();
-				person.SetMovingToWaitingArea (false,GameManager.instance.foyerGO.transform.position);
+				person.SetMovingToWaitingArea (false,GameManager.instance.foyer);
 				person.desiredDestination = dest;
 			}
 		}

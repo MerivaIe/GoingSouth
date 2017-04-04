@@ -14,8 +14,8 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 	public List<Destination> destinations{ get; private set; }
 	public List<TimetableItem> timetable{ get; private set; }
 	public Collider outOfStationTrigger { get; private set; }
+	public WaitingArea foyer { get; private set; }
 	public List<Material> defaultMaterialColors;	//set in Editor
-	public GameObject foyerGO;						//set in Editor
 	public int trainCount = 4;						//set in Editor
 	public GameObject trainPrefab;					//set in Editor
 	public float destructionInterval = 0.05f;		//set in Editor
@@ -44,6 +44,12 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 
 	void Awake () {
 		destructionQueue = new List<GameObject> ();
+
+		foreach (WaitingArea waitingArea in GameObject.FindObjectsOfType <WaitingArea>()) {
+			if (!waitingArea.GetComponent <Platform> ()) {
+				foyer = waitingArea;	//foyer will be the only waiting area without a platform... if more foyers are added this could be a List
+			}
+		}
 
 		foreach (Signal signal in GameObject.FindObjectsOfType <Signal>()) {
 			if (signal.signalType == Signal.SignalType.OutOfStation) {
@@ -129,6 +135,7 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 	public void OnTrainOutOfStation(TimetableItem timetableItem) {
 		trainPool.RestoreOption (timetableItem.train);
 		platforms.RestoreOption (timetableItem.platform);
+		timetable.Remove (timetableItem);
 		RecalculateSoonestTimetableItemForDestination (timetableItem.destination);
 	}
 

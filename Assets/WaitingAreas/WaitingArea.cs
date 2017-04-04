@@ -9,9 +9,10 @@ public class WaitingArea : MonoBehaviour {
 	[Tooltip("MUST SET THIS MANUALLY AS NAVMESH API IS LACKING")]
 	public float nmAgentRadius = 0.5f;
 	public float waitSpacing = 1f;
+	public Bounds waitAreaTriggerBounds { get; private set; }
 
 	private List<WaitLocation> waitLocations = new List<WaitLocation> ();
-	private Bounds waitAreaTriggerBounds;
+	private List<Person> peoplePassingThrough = new List<Person> ();
 
 	void Start () {
 		waitAreaTriggerBounds = GetComponentInChildren<WaitingAreaTrigger>().gameObject.GetComponent <BoxCollider>().bounds;
@@ -30,7 +31,7 @@ public class WaitingArea : MonoBehaviour {
 		}
 	}
 
-	public Vector3 RegisterPerson(Person person) {
+	public Vector3 RegisterPersonForWaiting(Person person) {
 		List<WaitLocation> freeWaitLocations = waitLocations.Where (a => a.person == null).ToList ();
 		if (freeWaitLocations.Count == 0) {	//no more wait locations, calculate some more
 			CalculateNewWaitLocations ();
@@ -41,24 +42,23 @@ public class WaitingArea : MonoBehaviour {
 		return waitLocation.position;
 	}
 
+	public void RegisterPersonPassingThrough(Person person) {
+		peoplePassingThrough.Add (person);
+	}
+
 	public void UnregisterPerson(Person person) {
 		WaitLocation waitLocation = waitLocations.FirstOrDefault(w => w.person == person);
-		if (waitLocation == null) {
-			Debug.LogError ("Could not find expected person in platform list to unregister.");
-		} else {
+		if (waitLocation != null) {
 			waitLocation.person = null;	//set person = null for this waitLocation
+		} else {
+			if (!peoplePassingThrough.Remove (person)) {
+				Debug.LogWarning (person.ToString () + " (person) could not be found to unregister.");
+			}
 		}
 	}
 
-	public bool GetPersonsWaitLocation(Person personToSearchFor, out Vector3 waitPosition) {
-		WaitLocation waitLocation = waitLocations.FirstOrDefault (w => w.person = personToSearchFor);
-		if (waitLocation != null) {
-			waitPosition = waitLocation.position;
-			return true;
-		} else {
-			waitPosition = Vector3.zero;
-			return false;
-		}
+	public bool IsPersonRegistered(Person personToSearchFor) {
+		return peoplePassingThrough.Contains (personToSearchFor) || waitLocations.Any (w => w.person == personToSearchFor) ;
 	}
 
 	private class WaitLocation {

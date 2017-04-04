@@ -1,11 +1,13 @@
 ﻿using UnityEngine;
 
+[RequireComponent(typeof(WaitingArea))]
 public class Platform : MonoBehaviour {
 
 	public int platformNumber;
 	public BoxCollider platformSignalTrigger { get; private set; }
 	[Tooltip("On train approach, does it stop to the left or to the right of the platform.")]
 	public bool isLeftHanded = true;
+	public WaitingArea waitingArea {get; private set;}
 
 	void Start () {
 		GameObject signalGO = GetComponentInChildren<Signal> ().gameObject;
@@ -14,6 +16,8 @@ public class Platform : MonoBehaviour {
 		Vector3 signalPosition = signalGO.transform.localPosition;
 		signalPosition.z = isLeftHanded ? 3.58f : -3.58f;
 		signalGO.transform.localPosition = signalPosition;
+
+		waitingArea = GetComponent <WaitingArea> ();
 	}
 		
 	public void OnAssignedToTimetableItem(TimetableItem timetableItem) {
