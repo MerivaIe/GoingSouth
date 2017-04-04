@@ -21,7 +21,7 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 	public float destructionInterval = 0.05f;		//set in Editor
 
 	private static GameManager s_Instance = null;
-	private List<GameObject> destructionQueue;
+	private Queue<GameObject> destructionQueue;
 
 	public static GameManager instance {
 		get {
@@ -43,7 +43,7 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 	}
 
 	void Awake () {
-		destructionQueue = new List<GameObject> ();
+		destructionQueue = new Queue <GameObject> ();
 
 		foreach (WaitingArea waitingArea in GameObject.FindObjectsOfType <WaitingArea>()) {
 			if (!waitingArea.GetComponent <Platform> ()) {
@@ -148,18 +148,18 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 		}
 	}
 
-	public void AddObjectsToDeletionQueue(List<GameObject> gameObjectToDelete) {
-		destructionQueue.AddRange (gameObjectToDelete);
+	public void AddObjectToDeletionQueue(GameObject gameObjectToDelete) {
+		destructionQueue.Enqueue (gameObjectToDelete);
 		if (!IsInvoking ("DestroyObjectsInQueue")) {
 			InvokeRepeating ("DestroyObjectsInQueue", 0f, destructionInterval);
 		}
 	}
 
 	void DestroyObjectsInQueue() {
-		if (destructionQueue.Count >= 0) {
-			CancelInvoke ();
+		if (destructionQueue.Count > 0) {
+			GameObject.Destroy (destructionQueue.Dequeue ());
 		} else {
-			GameObject.Destroy (destructionQueue[0]);
+			CancelInvoke ();
 		}
 	}
 }

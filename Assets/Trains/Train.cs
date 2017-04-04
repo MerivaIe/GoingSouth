@@ -157,7 +157,9 @@ public class Train : MonoBehaviour {
 			GameUIManager.instance.UpdateTrainStatus (this,"Travelling...");
 			GameManager.instance.OnTrainOutOfStation (myCurrentTimetableItem);
 			myCurrentTimetableItem = null;
-			GameManager.instance.AddObjectsToDeletionQueue (peopleOnBoard.Select (p => p.gameObject).ToList ());
+			foreach(GameObject personGO in peopleOnBoard.Select (p => p.gameObject)) {
+				GameManager.instance.AddObjectToDeletionQueue (personGO);
+			}
 			peopleOnBoard.Clear ();
 			status = TrainStatus.Parked;
 			rb.velocity = Vector3.zero;
