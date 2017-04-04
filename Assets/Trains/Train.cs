@@ -39,6 +39,7 @@ public class Train : MonoBehaviour {
 				status = TrainStatus.Idle;
 				rb.constraints |= RigidbodyConstraints.FreezePositionX;	//Set freeze x position
 				direction = -direction;									//change directions because train is at terminal
+				GameUIManager.instance.UpdateTrainStatus (this,"Now boarding...");
 				OpenDoors ();
 			} else {													//otherwise we are braking: reduce velocity to zero as we reach target position
 				Mathf.SmoothDamp (transform.position.x,accelerationTargetX,ref newVelocity.x,2f,speed,Time.fixedDeltaTime);
@@ -57,14 +58,13 @@ public class Train : MonoBehaviour {
 		status = TrainStatus.Braking;
 	}
 
-	void SetAccelerating() {
+	void SetDeparting() {
 		accelerationTargetX = GameManager.instance.outOfStationTrigger.bounds.center.x;
 		status = TrainStatus.Departing;
 	}
 
 	#region Platform Sequence
-	void OpenDoors ()
-	{
+	void OpenDoors () {
 		animator.SetTrigger ("doorOpen");
 		Invoke ("SetBoardingTime", animator.GetCurrentAnimatorStateInfo (0).length);
 	}
@@ -92,9 +92,10 @@ public class Train : MonoBehaviour {
 			doorTrigger.enabled = false;
 		}
 		HandlePeopleOnboard ();
-		SetAccelerating ();
+		SetDeparting ();
 		CalculateJourneyMetrics ();
 		Invoke ("CheckIfClearToEnterStation",journeyEndTime - journeyStartTime);	//invoke reenter station after journey duration
+		GameUIManager.instance.UpdateTrainStatus (this,"Leaving station...");
 	}
 	#endregion
 
@@ -132,6 +133,7 @@ public class Train : MonoBehaviour {
 			journeyEndTime = 0f;
 
 			GameUIManager.instance.OnTrainEnterStation (myCurrentTimetableItem);	//fade out the timetable UI item
+			GameUIManager.instance.UpdateTrainStatus (this,"Approaching platform...");
 		}
 	}
 
@@ -152,6 +154,7 @@ public class Train : MonoBehaviour {
 	public void OnEnterOutOfStationTrigger() {	//reset most things apart from journey time etc.
 		if (status == TrainStatus.Departing) {	//only want to trigger trains leaving station: Departing status will exclude trains that are inbound to station if they happen to hit the trigger
 			GameUIManager.instance.OnTrainOutOfStation(myCurrentTimetableItem);
+			GameUIManager.instance.UpdateTrainStatus (this,"Travelling...");
 			GameManager.instance.OnTrainOutOfStation (myCurrentTimetableItem);
 			myCurrentTimetableItem = null;
 			GameManager.instance.AddObjectsToDeletionQueue (peopleOnBoard.Select (p => p.gameObject).ToList ());

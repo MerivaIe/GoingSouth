@@ -15,7 +15,7 @@ public class GameUIManager : MonoBehaviour {
 	public Sprite trainUISprite;
 
 	private BiLookup<TimetableItemUIObject,TimetableItem> timetableUITracker;
-	private Dictionary<TrainTrackerUIObject,Train> trainUITracker;	//stored in a dic in case we need to use lookup in future, atm though it is only used in a full foreach loop over this dic to update sliders
+	private Dictionary<Train,TrainTrackerUIObject> trainUITracker;
 	private GameObject defaultOptionsMenu, itemCreationMenu, itemModificationMenu;
 	private Dropdown creation_destinationDropdown, modification_trainDropdown, modification_platformDropdown;
 	private Text clockText,creation_schedDepartureTimeText, modification_schedDepartureTimeText, modification_DestinationText;
@@ -48,7 +48,7 @@ public class GameUIManager : MonoBehaviour {
 
 	void Start () {				//must be after GameManager's Awake()
 		timetableUITracker = new BiLookup<TimetableItemUIObject, TimetableItem> ();
-		trainUITracker = new Dictionary<TrainTrackerUIObject, Train> ();	
+		trainUITracker = new Dictionary<Train,TrainTrackerUIObject> ();	
 
 		if (timetableItemPrefab == null || timetableItemsParent == null || trainTrackerParent == null || trainTrackerPrefab == null) {
 			Debug.LogWarning ("No timetable/train tracker item prefab and/or the parent object for them assigned.");
@@ -59,7 +59,10 @@ public class GameUIManager : MonoBehaviour {
 		} else {
 			foreach (Train train in GameManager.instance.trainPool.AvailableOptions) {
 				GameObject trainTracker = Instantiate (trainTrackerPrefab, trainTrackerParent.transform) as GameObject;
-				trainUITracker.Add (trainTracker.GetComponent <TrainTrackerUIObject>(),train);
+				TrainTrackerUIObject trainTrackerUIObject = trainTracker.GetComponent <TrainTrackerUIObject> ();
+				trainUITracker.Add (train,trainTrackerUIObject);
+				trainTrackerUIObject.trainIDText.text = train.trainSerialID.ToString ();
+				trainTrackerUIObject.statusText.text = "Ready to approach...";
 			}
 		}
 
@@ -85,8 +88,8 @@ public class GameUIManager : MonoBehaviour {
 	}
 
 	void Update() {
-		foreach (KeyValuePair<TrainTrackerUIObject,Train> trainUIPair in trainUITracker) {
-			trainUIPair.Key.slider.value = trainUIPair.Value.GetJourneyProgress ();
+		foreach (KeyValuePair<Train,TrainTrackerUIObject> trainUIPair in trainUITracker) {
+			trainUIPair.Value.slider.value = trainUIPair.Key.GetJourneyProgress ();
 		}
 	}
 		
@@ -104,6 +107,13 @@ public class GameUIManager : MonoBehaviour {
 
 	public static string ConvertGameTimeToHHMM(float gameTime) {
 		return string.Format("{0:#00}:{1:00}", Mathf.Floor(gameTime/60),Mathf.Floor(gameTime) % 60);
+	}
+
+	public void UpdateTrainStatus(Train train,string statusText) {
+		TrainTrackerUIObject trainTrackerUIObject;
+		if (trainUITracker.TryGetValue (train, out trainTrackerUIObject)) {
+			trainTrackerUIObject.statusText.text = statusText;
+		}
 	}
 
 	void ReturnToDefaultOptionsMenu(GameObject currentMenuToClose) {	//could make this more generic with menu to open to if UI gets more complex
