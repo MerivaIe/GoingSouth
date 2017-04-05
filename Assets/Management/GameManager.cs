@@ -16,8 +16,10 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 	public Collider outOfStationTrigger { get; private set; }
 	public WaitingArea foyer { get; private set; }
 	public List<Material> defaultMaterialColors;	//set in Editor
-	public int trainCount = 4;						//set in Editor
-	public GameObject trainPrefab;					//set in Editor
+	public int oneCarriageTrainCount = 4;			//set in Editor
+	public int twoCarriageTrainCount = 1;			//set in Editor
+	public GameObject oneCarriageTrainPrefab;		//set in Editor
+	public GameObject twoCarriageTrainPrefab;		//set in Editor
 	public float destructionInterval = 0.05f;		//set in Editor
 
 	private static GameManager s_Instance = null;
@@ -76,9 +78,17 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 			trainDockingPoint.x = outOfStationTrigger.bounds.center.x;
 			trainDockingPoint.y = 1.56f;
 			trainDockingPoint.z = 20f;
-			for (int i = 0; i < trainCount; i++) {
+			for (int i = 0; i < oneCarriageTrainCount; i++) {
 				trainDockingPoint.z += 5f;	//position trains along the z axis... when they are called into service/ journey time is complete just need to change z position to that of the platform's signal trigger and then go
-				GameObject trainGO = Instantiate (trainPrefab,trainDockingPoint,Quaternion.identity) as GameObject;
+				GameObject trainGO = Instantiate (oneCarriageTrainPrefab,trainDockingPoint,Quaternion.identity) as GameObject;
+				Train train = trainGO.GetComponent <Train> ();
+				train.Initialise ();	//Initialise some of Trains' properties early as they are required in DisplayManager before Trains' Start() method is called
+				trainDockingPoints.Add (trainDockingPoint);
+				trainPool.Add (train);
+			}
+			for (int i = 0; i < twoCarriageTrainCount; i++) {
+				trainDockingPoint.z += 5f;	//position trains along the z axis... when they are called into service/ journey time is complete just need to change z position to that of the platform's signal trigger and then go
+				GameObject trainGO = Instantiate (twoCarriageTrainPrefab,trainDockingPoint,Quaternion.identity) as GameObject;
 				Train train = trainGO.GetComponent <Train> ();
 				train.Initialise ();	//Initialise some of Trains' properties early as they are required in DisplayManager before Trains' Start() method is called
 				trainDockingPoints.Add (trainDockingPoint);
