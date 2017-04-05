@@ -197,7 +197,7 @@ public class Person : MonoBehaviour {
 				status = PersonStatus.BoardingTrain;
 			}
 		} else if (status == PersonStatus.MovingToTrainDoor) {
-			trainTarget.z += 2f * myTargetTimetableItem.train.transform.localScale.z;	//perhaps train width if we ever go wider trains
+			trainTarget.z += myTargetTimetableItem.platform.isLeftHanded? 2f : -2f;	//perhaps train width if we ever go wider trains
 			status = PersonStatus.BoardingTrain;
 		}
 	}

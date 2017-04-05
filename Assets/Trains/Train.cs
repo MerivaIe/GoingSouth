@@ -10,14 +10,15 @@ public class Train : MonoBehaviour {
 	public TrainStatus status;
 	public Vector3 direction;	//this should eventually be replaced with just transform.forward everywhere
 	public Material materialColor;
-	public SphereCollider[] doors {get; private set;}	//has to be collider so that transform is queried once train reaches platform
 	public string trainSerialID { get; private set; }
+	public SphereCollider[] doors {get; private set;}	//has to be collider so that transform is queried once train reaches platform
 
 	private Rigidbody rb;
 	private Animator animator;
 	private List<Person> peopleOnBoard = new List<Person> ();
 	private float accelerationTargetX, journeyStartTime = 0f, journeyEndTime = 0f;	//journeyProgress being calculated on demand, journeyEndTime will tell things when train is available to be assigned again
 	private TimetableItem myCurrentTimetableItem;
+	private ChiralTrainObjects chiralTrainObjects;
 
 	public void Initialise() {	//custom method which will be called in GameManager's Awake() to perform actions required before Start()
 		trainSerialID = string.Format("{0:X}",this.GetHashCode ()).Substring (4);	//this is required for serial ID because DisplayManager needs this info before Trains' Start() method is called
@@ -29,6 +30,8 @@ public class Train : MonoBehaviour {
 		status = TrainStatus.Parked;
 
 		doors = GetComponentsInChildren <SphereCollider>().ToArray ();
+
+		chiralTrainObjects = GetComponentInChildren <ChiralTrainObjects> ();
 	}
 
 	void FixedUpdate () {
@@ -71,8 +74,8 @@ public class Train : MonoBehaviour {
 	
 	void SetBoardingTime() {
 		animator.ResetTrigger ("doorOpen");
-		foreach (SphereCollider door in doors) {
-			door.enabled = true;
+		foreach (SphereCollider doorTrigger in doors) {
+			doorTrigger.enabled = true;
 		}
 		status = TrainStatus.BoardingTime;
 		Invoke ("CloseDoors", boardingDuration);
@@ -117,13 +120,16 @@ public class Train : MonoBehaviour {
 		if (Time.time >= journeyEndTime && myCurrentTimetableItem != null && myCurrentTimetableItem.platform) {
 			SetTrainColor (myCurrentTimetableItem.destination.materialColor);
 
-			float localScaleZ = myCurrentTimetableItem.platform.isLeftHanded ? 1f : -1f;	//set the train to be left or right handed according to platform
-			Vector3 newScale = transform.localScale;
-			newScale.z = localScaleZ;
-			transform.localScale = newScale;
+			if (myCurrentTimetableItem.platform.isLeftHanded) {	//set the train to be left or right handed according to platform
+				chiralTrainObjects.transform.rotation = Quaternion.Euler (0f,180f,0f);
+				chiralTrainObjects.transform.localPosition = chiralTrainObjects.leftHandedPosition;
+			} else {
+				chiralTrainObjects.transform.rotation = Quaternion.Euler (Vector3.zero);
+				chiralTrainObjects.transform.localPosition = Vector3.zero;
+			}
 
 			Vector3 trackPosition = transform.position;
-			trackPosition.z = myCurrentTimetableItem.platform.platformSignalTrigger.bounds.center.z + localScaleZ;	//pivot of train is off centre by about 1 unit
+			trackPosition.z = myCurrentTimetableItem.platform.platformSignalTrigger.bounds.center.z + 1f;	//pivot of train is off centre by about 1 unit
 			transform.position = trackPosition;
 
 			direction = Vector3.right;
