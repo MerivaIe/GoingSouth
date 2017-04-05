@@ -143,7 +143,7 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 	}
 		
 	public void OnTrainOutOfStation(TimetableItem timetableItem) {
-		trainPool.RestoreOption (timetableItem.train);
+		trainPool.RestoreOption (timetableItem.train);	//TODO: it seems that this sometimes calls on options that are already restored... investigate
 		platforms.RestoreOption (timetableItem.platform);
 		timetable.Remove (timetableItem);
 		RecalculateSoonestTimetableItemForDestination (timetableItem.destination);
