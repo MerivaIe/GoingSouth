@@ -23,4 +23,10 @@ public class Platform : MonoBehaviour {
 	public void OnAssignedToTimetableItem(TimetableItem timetableItem) {
 		//TODO: MEDIUM PRIORITY change colour of text being displayed and also the name of destination
 	}
+
+	public void OnTrainBoardingTime() {
+		foreach (Person person in waitingArea.PeopleWaiting) {
+			person.OnTrainBoardingTime ();
+		}
+	}
 }

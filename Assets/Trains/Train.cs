@@ -74,10 +74,11 @@ public class Train : MonoBehaviour {
 	
 	void SetBoardingTime() {
 		animator.ResetTrigger ("doorOpen");
+		status = TrainStatus.BoardingTime;
+		myCurrentTimetableItem.platform.OnTrainBoardingTime();
 		foreach (SphereCollider doorTrigger in doors) {
 			doorTrigger.enabled = true;
 		}
-		status = TrainStatus.BoardingTime;
 		Invoke ("CloseDoors", boardingDuration);
 	}
 

@@ -21,7 +21,6 @@ public class Person : MonoBehaviour {
 	private NavMeshAgent nmAgent;
 	private NavMeshObstacle nmObstacle;
 	private Rigidbody rb;
-	private WaitingArea targetWaitingArea;
 	private Vector3 waitingTarget, trainTarget, toWaitingTarget;	//different wait and train targets so that
 	private static float[] proximityAngles;
 	private float nextCheckTime = 0f;
@@ -89,7 +88,6 @@ public class Person : MonoBehaviour {
 					if (GameManager.instance.foyer.IsPersonRegistered (this)) {	//if person already in foyer then perform series of fairly inefficient resetting steps
 						GameManager.instance.foyer.UnregisterPerson (this);
 						status = PersonStatus.MovingToFoyer;
-						targetWaitingArea = GameManager.instance.foyer;
 						OnWaitingAreaEnter (GameManager.instance.foyer);
 					} else {	//else person is outside the foyer so just retarget the foyer
 						SetMovingToWaitingArea (false, GameManager.instance.foyer);
@@ -110,13 +108,6 @@ public class Person : MonoBehaviour {
 						rb.AddForce (Vector3.up, ForceMode.Acceleration);
 					}
 					return;
-				}
-				//this will execute just once if train is at station to ready person: could be done in a one off method called by either train at arrival time or platform if someone arrives and train is here... increases complexity of model but performance would likely improve
-				if (status == PersonStatus.ReadyToBoard) {
-					SetAgentControl (false);
-					SetDoorTarget ();
-					transform.LookAt (trainTarget);	//maybe look at random target? or smoother
-					status = PersonStatus.MovingToTrainDoor;
 				}
 				//handle boarding situations (getting to door using force/velocity, getting into train using force)
 				Vector3 boardingVector = trainTarget - transform.position;
@@ -212,6 +203,13 @@ public class Person : MonoBehaviour {
 		}
 	}
 
+	public void OnTrainBoardingTime() {
+		SetAgentControl (false);
+		SetDoorTarget ();
+		transform.LookAt (trainTarget);	//maybe look at random target? or smoother
+		status = PersonStatus.MovingToTrainDoor;
+	}
+
 	public void OnTrainDeparture() {
 		Component.Destroy (rb);
 		transform.parent = myTargetTimetableItem.train.transform;
@@ -220,26 +218,30 @@ public class Person : MonoBehaviour {
 
 	public void SetMovingToWaitingArea(bool isPlatform, WaitingArea waitingArea) {
 		SetAgentControl (true);	//may jerk them up... change this to after a recovery period once they have stood up?
-		targetWaitingArea = waitingArea;
 		nmAgent.SetDestination (waitingArea.waitAreaTriggerBounds.center);
 		status = isPlatform? PersonStatus.MovingToPlatform : PersonStatus.MovingToFoyer;	
 	}
 	public void SetMovingToWaitingArea() {	//this exists purely so that this function can be invoked by OnHitGround() [targetWaitingArea will already have been set if someone hits ground]
 		bool isPlatform = !(status == PersonStatus.AtFoyer || status == PersonStatus.MovingToFoyer);
+		WaitingArea targetWaitingArea = isPlatform ? myTargetTimetableItem.platform.waitingArea : GameManager.instance.foyer;
 		SetMovingToWaitingArea (isPlatform,targetWaitingArea);
 	}
 		
 	public void OnWaitingAreaEnter(WaitingArea waitingAreaEnterred) {
-		if (waitingAreaEnterred == targetWaitingArea) {
-			waitingTarget = waitingAreaEnterred.RegisterPersonForWaiting (this);
-			SetAgentControl (true);	//we were getting some people under physics control entering waiting areas and trying to SetDestination
-			nmAgent.SetDestination (waitingTarget);
-			rb.constraints = RigidbodyConstraints.FreezePositionY;	//TODO: MEDIUM PRIORITY believe this is what is causing some people to penetrate the platform slightly (they must be reentering at wrong height)
-
-			if (status == PersonStatus.MovingToPlatform) {	//this will exclude compromised people
-				status = PersonStatus.ReadyToBoard;
+		WaitingArea desiredWaitingArea = (myTargetTimetableItem != null && myTargetTimetableItem.platform != null) ? myTargetTimetableItem.platform.waitingArea : GameManager.instance.foyer;
+		if (waitingAreaEnterred == desiredWaitingArea) {
+			if (status == PersonStatus.BoardingTrain) {	//for any people that fall out of train while boarding just register them as passing through
+				waitingAreaEnterred.RegisterPersonPassingThrough (this);
+			} else if (status == PersonStatus.MovingToPlatform) {
+				if (myTargetTimetableItem != null && myTargetTimetableItem.train.status == Train.TrainStatus.BoardingTime) {	//if we have entered a platform whilst train is boarding already
+					OnTrainBoardingTime ();
+				} else {
+					status = PersonStatus.ReadyToBoard;
+					SetMovingToWaitLocationInWaitingArea (waitingAreaEnterred);
+				}
 			} else if (status == PersonStatus.MovingToFoyer) {
 				status = PersonStatus.AtFoyer;
+				SetMovingToWaitLocationInWaitingArea (waitingAreaEnterred);
 			}
 		} else {
 			waitingAreaEnterred.RegisterPersonPassingThrough (this);
@@ -248,7 +250,16 @@ public class Person : MonoBehaviour {
 
 	public void OnWaitingAreaExit(WaitingArea waitingArea) {
 		waitingArea.UnregisterPerson (this);
-		rb.constraints = RigidbodyConstraints.None;
+		if (status != PersonStatus.MovingToPlatform) {	//fixed: do not want people moving out of foyer and onto platform to suddenly go limp
+			rb.constraints = RigidbodyConstraints.None;
+		}
+	}
+
+	void SetMovingToWaitLocationInWaitingArea(WaitingArea waitingAreaEnterred) {
+		waitingTarget = waitingAreaEnterred.RegisterPersonForWaiting (this);
+		SetAgentControl (true);	//we were getting some people under physics control entering waiting areas and trying to SetDestination
+		nmAgent.SetDestination (waitingTarget);
+		rb.constraints = RigidbodyConstraints.FreezePositionY;	//TODO: [this is required to get people who have fallen back to y lock] MEDIUM PRIORITY believe this is what is causing some people to penetrate the platform slightly (they must be reentering at wrong height)
 	}
 
 	public void OnHitGround() {						//make the person return to their waiting area
@@ -272,5 +283,12 @@ public class Person : MonoBehaviour {
 
 	public void OnTrainExit() {
 		insideTrain = false;
+	}
+
+	public void OnDrawGizmos() {
+		if (trainTarget != null) {
+			Gizmos.color = Color.green;
+			Gizmos.DrawSphere (trainTarget,0.2f);
+		}
 	}
 }

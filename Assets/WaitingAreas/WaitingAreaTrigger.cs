@@ -13,14 +13,14 @@ public class WaitingAreaTrigger : MonoBehaviour {
 
 	void OnTriggerEnter (Collider coll) {
 		Person person = coll.gameObject.GetComponent <Person> ();
-		if (person) {
+		if (person && person.status != Person.PersonStatus.Compromised) {
 			person.OnWaitingAreaEnter (myWaitingArea);
 		}
 	}
 
 	void OnTriggerExit (Collider coll) {
 		Person person = coll.gameObject.GetComponent <Person> ();
-		if (person) {
+		if (person && person.status != Person.PersonStatus.Compromised) {
 			person.OnWaitingAreaExit (myWaitingArea);
 		}
 	}

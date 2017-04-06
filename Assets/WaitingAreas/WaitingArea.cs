@@ -18,6 +18,12 @@ public class WaitingArea : MonoBehaviour {
 		waitAreaTriggerBounds = GetComponentInChildren<WaitingAreaTrigger>().gameObject.GetComponent <BoxCollider>().bounds;
 	}
 
+	public IEnumerable<Person> PeopleWaiting {
+		get {
+			return waitLocations.Where (w => w.person != null).Select (w => w.person);
+		}
+	}
+
 	void CalculateNewWaitLocations(){	// a nice way of doing this would be to store old locations generated and workaround them
 		PoissonDiscSampler sampler = new PoissonDiscSampler (waitAreaTriggerBounds.size.x - 2*nmAgentRadius, waitAreaTriggerBounds.size.z - 2*nmAgentRadius, waitSpacing);
 		foreach (Vector2 sample in sampler.Samples()) {
