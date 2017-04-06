@@ -98,7 +98,7 @@ public class Train : MonoBehaviour {
 		HandlePeopleOnboard ();
 		SetDeparting ();
 		CalculateJourneyMetrics ();
-		Invoke ("CheckIfClearToEnterStation",journeyEndTime - journeyStartTime);	//invoke reenter station after journey duration
+		Invoke ("OnJourneyEnd",journeyEndTime - journeyStartTime);	//invoke reenter station after journey duration
 		GameUIManager.instance.UpdateTrainStatus (this,"Leaving station...");
 	}
 	#endregion
@@ -149,6 +149,10 @@ public class Train : MonoBehaviour {
 		CheckIfClearToEnterStation ();
 	}
 
+	public void OnRemovedFromTimetableItem(TimetableItem timetableItem) {
+		myCurrentTimetableItem = null;
+	}
+
 	public float GetJourneyProgress() {	//return 0-1 for slider value
 		if (journeyStartTime == 0f) {
 			return 0f;
@@ -173,6 +177,11 @@ public class Train : MonoBehaviour {
 			transform.position = GameManager.instance.trainDockingPoints.AvailableOptions [0];
 			GameManager.instance.trainDockingPoints.ExhaustOption (0);
 		}
+	}
+
+	void OnJourneyEnd() {
+		GameUIManager.instance.UpdateTrainStatus (this,"Ready to approach...");
+		CheckIfClearToEnterStation ();
 	}
 
 	public void SetTrainColor(Material _materialColor) {

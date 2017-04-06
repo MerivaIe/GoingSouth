@@ -129,6 +129,16 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 		RecalculateSoonestTimetableItemForDestination (timetableItem.destination);
 	}
 
+	public void RemoveTrainFromTimetableItem(TimetableItem timetableItem) {
+		trainPool.RestoreOption (timetableItem.train);
+		timetableItem.train.OnRemovedFromTimetableItem (timetableItem);
+	}
+
+	public void RemovePlatformFromTimetableItem(TimetableItem timetableItem) {
+		platforms.RestoreOption (timetableItem.platform);
+		timetableItem.platform.OnRemovedFromTimetableItem (timetableItem);
+	}
+
 	public void ConfirmCreatedTimetableItem(int destinationIndex, TimetableItem timetableItem) {
 		//scheduled departure time of the timetableItem passed to us is already set as it is changed by GameUIManager in response to player input
 		timetableItem.SetDestination (destinations [destinationIndex]);

@@ -233,7 +233,8 @@ public class Person : MonoBehaviour {
 			if (status == PersonStatus.BoardingTrain) {	//for any people that fall out of train while boarding just register them as passing through
 				waitingAreaEnterred.RegisterPersonPassingThrough (this);
 			} else if (status == PersonStatus.MovingToPlatform) {
-				if (myTargetTimetableItem != null && myTargetTimetableItem.train.status == Train.TrainStatus.BoardingTime) {	//if we have entered a platform whilst train is boarding already
+				if (myTargetTimetableItem != null && myTargetTimetableItem.train.status == Train.TrainStatus.BoardingTime) {	//if we have entered a platform whilst train is boarding already then call OnTrainBoarding and just register that we are passing thrrough
+					waitingAreaEnterred.RegisterPersonPassingThrough(this);
 					OnTrainBoardingTime ();
 				} else {
 					status = PersonStatus.ReadyToBoard;
@@ -286,7 +287,7 @@ public class Person : MonoBehaviour {
 	}
 
 	public void OnDrawGizmos() {
-		if (trainTarget != null) {
+		if (trainTarget != Vector3.zero) {
 			Gizmos.color = Color.green;
 			Gizmos.DrawSphere (trainTarget,0.2f);
 		}

@@ -142,7 +142,7 @@ public class GameUIManager : MonoBehaviour {
 			modification_DestinationText.text = activeTimetableItem.destination.name;
 
 			if (activeTimetableItem.train) {	//if the item selected for mods had a train already chosen previously then restore it to available options
-				GameManager.instance.trainPool.RestoreOption (activeTimetableItem.train);
+				GameManager.instance.RemoveTrainFromTimetableItem (activeTimetableItem);
 			}
 			modification_trainDropdown.ClearOptions ();
 			List<Dropdown.OptionData> dropdownOptions = new List<Dropdown.OptionData> ();
@@ -153,7 +153,7 @@ public class GameUIManager : MonoBehaviour {
 			modification_trainDropdown.value = !activeTimetableItem.train? 0: GameManager.instance.trainPool.AvailableOptions.IndexOf (activeTimetableItem.train);	//if the item selected for mods had a train already chosen previously then select it as the dropdown option
 
 			if (activeTimetableItem.platform) {	//if the item selected for mods had a platform already chosen previously then restore it to available options and select it in the dropdown
-				GameManager.instance.platforms.RestoreOption (activeTimetableItem.platform);
+				GameManager.instance.RemovePlatformFromTimetableItem (activeTimetableItem);
 			}
 			modification_platformDropdown.ClearOptions ();
 			modification_platformDropdown.AddOptions (GameManager.instance.platforms.AvailableOptions.Select (a => "Platform " + a.platformNumber).ToList ());

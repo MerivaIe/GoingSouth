@@ -24,6 +24,10 @@ public class Platform : MonoBehaviour {
 		//TODO: MEDIUM PRIORITY change colour of text being displayed and also the name of destination
 	}
 
+	public void OnRemovedFromTimetableItem(TimetableItem timetableItem) {
+		//empty for now
+	}
+
 	public void OnTrainBoardingTime() {
 		foreach (Person person in waitingArea.PeopleWaiting) {
 			person.OnTrainBoardingTime ();
