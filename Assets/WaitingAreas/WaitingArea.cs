@@ -6,8 +6,6 @@ using UnityEngine.AI;
 
 public class WaitingArea : MonoBehaviour {
 
-	[Tooltip("MUST SET THIS MANUALLY AS NAVMESH API IS LACKING")]
-	public float nmAgentRadius = 0.5f;
 	public float waitSpacing = 1f;
 	public Bounds waitAreaTriggerBounds { get; private set; }
 
@@ -25,11 +23,11 @@ public class WaitingArea : MonoBehaviour {
 	}
 
 	void CalculateNewWaitLocations(){	// a nice way of doing this would be to store old locations generated and workaround them
-		PoissonDiscSampler sampler = new PoissonDiscSampler (waitAreaTriggerBounds.size.x - 2*nmAgentRadius, waitAreaTriggerBounds.size.z - 2*nmAgentRadius, waitSpacing);
+		PoissonDiscSampler sampler = new PoissonDiscSampler (waitAreaTriggerBounds.size.x - 2*Person.nmAgentRadius, waitAreaTriggerBounds.size.z - 2*Person.nmAgentRadius, waitSpacing);
 		foreach (Vector2 sample in sampler.Samples()) {
 			Vector3 waitLocation = waitAreaTriggerBounds.min;	//place at the '0,0' location for the generated grid
-			waitLocation.x += sample.x + nmAgentRadius;
-			waitLocation.z += sample.y + nmAgentRadius;
+			waitLocation.x += sample.x + Person.nmAgentRadius;
+			waitLocation.z += sample.y + Person.nmAgentRadius;
 			NavMeshHit hit;										//using SamplePosition to make absolutely sure the wait location we have generated ends up on the navmesh
 			if (NavMesh.SamplePosition (waitLocation, out hit, 0.5f, NavMesh.AllAreas)) {
 				waitLocations.Add (new WaitLocation(hit.position,null));

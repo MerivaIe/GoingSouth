@@ -120,6 +120,7 @@ public class Train : MonoBehaviour {
 	void CheckIfClearToEnterStation() {	//called once at the end of journey duration (invoked in Depart) and every time the train is assigned to a new timetable item
 		if (Time.time >= journeyEndTime && myCurrentTimetableItem != null && myCurrentTimetableItem.platform && !myCurrentTimetableItem.modificationFlag) {
 			SetTrainColor (myCurrentTimetableItem.destination.materialColor);
+			peopleOnBoard.Clear ();
 
 			if (myCurrentTimetableItem.platform.isLeftHanded) {	//set the train to be left or right handed according to platform
 				chiralTrainObjects.transform.rotation = Quaternion.Euler (0f,180f,0f);
@@ -171,7 +172,6 @@ public class Train : MonoBehaviour {
 			foreach(GameObject personGO in peopleOnBoard.Select (p => p.gameObject)) {
 				GameManager.instance.AddObjectToDeletionQueue (personGO);
 			}
-			peopleOnBoard.Clear ();
 			status = TrainStatus.Parked;
 			rb.velocity = Vector3.zero;
 			transform.position = GameManager.instance.trainDockingPoints.AvailableOptions [0];

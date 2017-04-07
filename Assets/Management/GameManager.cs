@@ -139,6 +139,7 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 		//for future reference: do not need to RestoreOption for train or platform because they are restored when item is first selected for modification, if it is then wiped they will stay restored!
 		timetableItem.platform.OnRemovedFromTimetableItem (timetableItem);
 		timetableItem.platform = null;
+		//TODO: reduce people's happiness
 		RecalculateSoonestTimetableItemForDestination (timetableItem.destination);	//will set it to null unless there is another timetable item for this dest with a platform assignment
 	}
 

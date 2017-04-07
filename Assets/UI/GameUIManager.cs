@@ -19,6 +19,7 @@ public class GameUIManager : MonoBehaviour {
 	private GameObject defaultOptionsMenu, itemCreationMenu, itemModificationMenu;
 	private Dropdown creation_destinationDropdown, modification_trainDropdown, modification_platformDropdown;
 	private Text clockText,creation_schedDepartureTimeText, modification_schedDepartureTimeText, modification_DestinationText;
+	private Slider approvalSlider;
 	private TimetableItem activeTimetableItem;	//only one timetableitem is created/modified at a time so we store a reference to it using this
 	private Dropdown.OptionData emptyDropdownOption;
 
@@ -69,15 +70,15 @@ public class GameUIManager : MonoBehaviour {
 
 		emptyDropdownOption = new Dropdown.OptionData ("None");
 
+		clockText = MyFindUIObjectWithTag ("UI_ClockText").GetComponent <Text> ();
+		approvalSlider = MyFindUIObjectWithTag ("UI_ApprovalSlider").GetComponent <Slider> ();
 		defaultOptionsMenu = MyFindUIObjectWithTag ("UI_DefaultOptionsMenu");	//note: must have all of the menus activated initially to find their elements, then deactivate them later
 		itemCreationMenu = MyFindUIObjectWithTag ("UI_ItemCreationMenu");
 		itemModificationMenu = MyFindUIObjectWithTag ("UI_ItemModificationMenu");
 		
-		clockText = MyFindUIObjectWithTag ("UI_ClockText").GetComponent <Text> ();
 		creation_schedDepartureTimeText = MyFindUIObjectWithTag ("UI_Create_SchedDepartureTimeText").GetComponent <Text> ();
 		modification_schedDepartureTimeText = MyFindUIObjectWithTag ("UI_Mod_SchedDepartureTimeText").GetComponent <Text> ();
 		modification_DestinationText = MyFindUIObjectWithTag ("UI_DestinationText").GetComponent <Text> ();
-
 		creation_destinationDropdown = MyFindUIObjectWithTag ("UI_DestinationDropdown").GetComponent <Dropdown>();
 		modification_trainDropdown = MyFindUIObjectWithTag ("UI_TrainDropdown").GetComponent <Dropdown>();
 		modification_platformDropdown = MyFindUIObjectWithTag ("UI_PlatformDropdown").GetComponent <Dropdown>();
@@ -98,6 +99,7 @@ public class GameUIManager : MonoBehaviour {
 		
 	void UpdateDisplayAtInterval() {	//called every displayUpdateInterval seconds
 		clockText.text = ConvertGameTimeToHHMM (GameManager.instance.GetCurrentGameTime());
+		if (Person.peopleCount > 0) {approvalSlider.value = Person.totalApprovalRating / Person.peopleCount;}
 	}
 
 	GameObject MyFindUIObjectWithTag(string searchForTag) {

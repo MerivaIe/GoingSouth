@@ -17,13 +17,16 @@ public class Person : MonoBehaviour {
 	public Destination desiredDestination;
 	public float boardingForce = 20f, nudgeForce = 1f, checkingInterval = 0.5f,proximityDistance = 0.5f, centreOfMassYOffset = 0f;
 	public static float sqrTargetThreshold = 4f;
+	public static float nmAgentRadius {get; private set;}
+	public static int peopleCount { get; private set; }
+	public static int totalApprovalRating {get; private set;}
 
 	private NavMeshAgent nmAgent;
 	private NavMeshObstacle nmObstacle;
 	private Rigidbody rb;
 	private Vector3 waitingTarget, trainTarget, toWaitingTarget;	//different wait and train targets so that
 	private static float[] proximityAngles;
-	private float nextCheckTime = 0f;
+	private float nextCheckTime = 0f, arrivalTimeAtStation;
 	private bool boardUsingForce = false, atWaitingTarget = false;
 	private TimetableItem myTargetTimetableItem;
 
@@ -31,11 +34,19 @@ public class Person : MonoBehaviour {
 		rb = GetComponent <Rigidbody> ();
 		nmAgent = GetComponent <NavMeshAgent>();
 		nmObstacle = GetComponent <NavMeshObstacle> ();
-		nmAgent.speed = Random.Range(2f,5f);
+		nmAgent.speed = Random.Range(2.5f,5f);
+		if (nmAgentRadius == 0) {	//i.e. not set
+			nmAgentRadius = nmAgent.radius;
+		}
 
 		Vector3 newCentreOfMass = rb.centerOfMass;
 		newCentreOfMass.y = centreOfMassYOffset;
 		rb.centerOfMass = newCentreOfMass;
+
+		peopleCount++;
+		totalApprovalRating += 50;	//people start off at 50/100
+
+		arrivalTimeAtStation = Time.time;
 
 		toWaitingTarget.y = 0f;	//we will only ever modify the xz
 		insideTrain = false;
@@ -81,9 +92,9 @@ public class Person : MonoBehaviour {
 					break;
 				}
 			}
-		} else {	//else destination's soonest timetable item is null but this Person has a target timetable item set
+		} else {	//else destination's soonest timetable item is null
 			if (status != PersonStatus.SatDown && status != PersonStatus.Compromised) {	//(people on train or compromised should ignore)
-				if (myTargetTimetableItem != null) {	//...it means platform has been deselected or timetable item already satisfied before Person could reach the train
+				if (myTargetTimetableItem != null) {	//...and this person has a timetableItem set then it means platform has been deselected or timetable item already satisfied before Person could reach the train
 					myTargetTimetableItem = null;
 					if (GameManager.instance.foyer.IsPersonRegistered (this)) {	//if person already in foyer then perform series of fairly inefficient resetting steps
 						GameManager.instance.foyer.UnregisterPerson (this);
@@ -91,6 +102,10 @@ public class Person : MonoBehaviour {
 						OnWaitingAreaEnter (GameManager.instance.foyer);
 					} else {	//else person is outside the foyer so just retarget the foyer
 						SetMovingToWaitingArea (false, GameManager.instance.foyer);
+					}
+				} else {	//destination soonest timetable item null and Person doesn't have one set so still waiting... (yawn)
+					if (Time.time - arrivalTimeAtStation > (30/GameManager.gameMinutesPerRealSecond)) {	//if waiting for more than 30 minutes
+						totalApprovalRating -= 1;
 					}
 				}
 			}
@@ -214,6 +229,7 @@ public class Person : MonoBehaviour {
 		Component.Destroy (rb);
 		transform.parent = myTargetTimetableItem.train.transform;
 		status = PersonStatus.SatDown;
+		totalApprovalRating += 50;
 	}
 
 	public void SetMovingToWaitingArea(bool isPlatform, WaitingArea waitingArea) {
@@ -275,6 +291,7 @@ public class Person : MonoBehaviour {
 			SetAgentControl (false);
 			rb.ResetCenterOfMass ();
 			rb.constraints = RigidbodyConstraints.None;
+			totalApprovalRating -= 50;
 		}
 	}
 
@@ -284,6 +301,14 @@ public class Person : MonoBehaviour {
 
 	public void OnTrainExit() {
 		insideTrain = false;
+	}
+
+	public void OnEnterOutOfStationTrigger() {
+		Destroy (gameObject);
+	}
+
+	public void ChangeApprovalRating(int valueChange) {
+		totalApprovalRating += valueChange;
 	}
 
 	public void OnDrawGizmos() {
