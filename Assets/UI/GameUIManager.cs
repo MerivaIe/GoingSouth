@@ -20,6 +20,7 @@ public class GameUIManager : MonoBehaviour {
 	private Dropdown creation_destinationDropdown, modification_trainDropdown, modification_platformDropdown;
 	private Text clockText,creation_schedDepartureTimeText, modification_schedDepartureTimeText, modification_DestinationText;
 	private TimetableItem activeTimetableItem;	//only one timetableitem is created/modified at a time so we store a reference to it using this
+	private Dropdown.OptionData emptyDropdownOption;
 
 	private static GameUIManager s_Instance = null;
 
@@ -65,6 +66,8 @@ public class GameUIManager : MonoBehaviour {
 				trainTrackerUIObject.statusText.text = "Ready to approach...";
 			}
 		}
+
+		emptyDropdownOption = new Dropdown.OptionData ("None");
 
 		defaultOptionsMenu = MyFindUIObjectWithTag ("UI_DefaultOptionsMenu");	//note: must have all of the menus activated initially to find their elements, then deactivate them later
 		itemCreationMenu = MyFindUIObjectWithTag ("UI_ItemCreationMenu");
@@ -133,31 +136,44 @@ public class GameUIManager : MonoBehaviour {
 		itemCreationMenu.SetActive (true);
 	}
 	public void OnClick_TimetableItemForModification(TimetableItemUIObject timetableUIObject) {
-		//get the timetable item [Model] for this particular timetable UI object and store in the activeTimetableItem reference
+		//get the timetable item [Model] for this particular timetable UI object and store in the activeTimetable ref. NOTE: this is required so that Confirm Modified Item can use this ref. later
 		if (timetableUITracker.TryGetValueByFirst (timetableUIObject, out activeTimetableItem)) {
 			defaultOptionsMenu.SetActive (false);
+			activeTimetableItem.modificationFlag = true;
 			timetableItemsParent.GetComponent <CanvasGroup> ().interactable = false;	//set all timetable UI items so they cannot be modified
 			//populate the 4 modification menu items with the values from this timetable item that is being modified
 			modification_schedDepartureTimeText.text = ConvertGameTimeToHHMM (activeTimetableItem.scheduledDepartureTime);
 			modification_DestinationText.text = activeTimetableItem.destination.name;
 
-			if (activeTimetableItem.train) {	//if the item selected for mods had a train already chosen previously then restore it to available options
-				GameManager.instance.RemoveTrainFromTimetableItem (activeTimetableItem);
+			Train previouslySelectedTrain = null;
+			if (previouslySelectedTrain != null) {	//if the item selected for mods had a train already chosen previously then restore it to available options
+				//GameManager.instance.RemoveTrainFromTimetableItem (activeTimetableItem);
+				GameManager.instance.trainPool.RestoreOption (activeTimetableItem.train);
 			}
 			modification_trainDropdown.ClearOptions ();
 			List<Dropdown.OptionData> dropdownOptions = new List<Dropdown.OptionData> ();
+			emptyDropdownOption.text = "No train";
+			dropdownOptions.Add (emptyDropdownOption);	//an empty option at start
 			foreach (Train train in GameManager.instance.trainPool.AvailableOptions) {
 				dropdownOptions.Add (new Dropdown.OptionData(train.trainSerialID,trainUISprite));
 			}
 			modification_trainDropdown.AddOptions (dropdownOptions);	
-			modification_trainDropdown.value = !activeTimetableItem.train? 0: GameManager.instance.trainPool.AvailableOptions.IndexOf (activeTimetableItem.train);	//if the item selected for mods had a train already chosen previously then select it as the dropdown option
+			modification_trainDropdown.value = (previouslySelectedTrain == null)? 0 : GameManager.instance.trainPool.AvailableOptions.IndexOf (previouslySelectedTrain) + 1;	//if the item selected for mods had a train already chosen previously then select it as the dropdown option, otherwise the empty option
 
-			if (activeTimetableItem.platform) {	//if the item selected for mods had a platform already chosen previously then restore it to available options and select it in the dropdown
-				GameManager.instance.RemovePlatformFromTimetableItem (activeTimetableItem);
+			Platform previouslySelectedPlatform = activeTimetableItem.platform;
+			if (previouslySelectedPlatform != null) {	//if the item selected for mods had a platform already chosen previously then restore it to available options and select it in the dropdown
+				//GameManager.instance.RemovePlatformFromTimetableItem (activeTimetableItem);
+				GameManager.instance.platforms.RestoreOption (activeTimetableItem.platform);
 			}
 			modification_platformDropdown.ClearOptions ();
-			modification_platformDropdown.AddOptions (GameManager.instance.platforms.AvailableOptions.Select (a => "Platform " + a.platformNumber).ToList ());
-			modification_platformDropdown.value = !activeTimetableItem.platform? 0 : GameManager.instance.platforms.AvailableOptions.IndexOf (activeTimetableItem.platform);	//if the item selected for mods had a platform already chosen previously then select it in the dropdown
+			dropdownOptions.Clear (); //used for trains prior to this
+			emptyDropdownOption.text = "No platform";
+			dropdownOptions.Add (emptyDropdownOption);	//an empty option at start
+			foreach (Platform platform in GameManager.instance.platforms.AvailableOptions) {
+				dropdownOptions.Add (new Dropdown.OptionData("Platform " + platform.platformNumber.ToString ()));
+			}
+			modification_platformDropdown.AddOptions (dropdownOptions);
+			modification_platformDropdown.value = (previouslySelectedPlatform == null)? 0 : GameManager.instance.platforms.AvailableOptions.IndexOf (previouslySelectedPlatform) + 1;	//if the item selected for mods had a platform already chosen previously then select it in the dropdown, otherwise the empty option
 			itemModificationMenu.SetActive (true);
 		} else {
 			Debug.LogWarning ("Player clicked a Timetable UI Item for modification but it was not found in the timetableUITracker dictionary of such items. Modification will not occur.");
@@ -188,6 +204,7 @@ public class GameUIManager : MonoBehaviour {
 
 	//Item Modification Menu Actions
 	public void OnClick_CancelItemModification() {
+		activeTimetableItem.modificationFlag = false;
 		//below is premised on the fact that activeTimetableItem will hold the timetable item as it was when it was first selected for modification (see OnClick_TimetableItemForModification)
 		if (activeTimetableItem.train) {	//remove previously chosen train from list of available trains
 			GameManager.instance.trainPool.ExhaustOption (activeTimetableItem.train);
@@ -198,29 +215,28 @@ public class GameUIManager : MonoBehaviour {
 		ReturnToDefaultOptionsMenu (itemModificationMenu);
 	}
 	public void OnClick_ConfirmModifiedItem() {
-		if (modification_platformDropdown.options.Count > 0) {	//ignore this dropdown if it didnt have anything in it
-			GameManager.instance.AssignPlatformToTimetableItem (modification_platformDropdown.value,activeTimetableItem);	//Reference the platform selected by player N.B this is premised upon the dropdown options being populated by Model lists (i.e.trains,platforms) above meaning indexes of dropdown/Model will be identical
-		}
-		if (modification_trainDropdown.options.Count > 0) {		//ignore this dropdown if it didnt have anything in it
-			GameManager.instance.AssignTrainToTimetableItem (modification_trainDropdown.value,activeTimetableItem);	//Reference the train selected by player N.B this is premised upon the dropdown options being populated by Model lists (i.e.trains,platforms) above meaning indexes of dropdown/Model will be identical
-		}
+		activeTimetableItem.modificationFlag = false;
 		TimetableItemUIObject timetableItemUIObject;
 		timetableUITracker.TryGetValueBySecond (activeTimetableItem, out timetableItemUIObject);
-		if (activeTimetableItem.platform != null) {	//if a platform was selected by the player (
+
+		if (modification_platformDropdown.value == 0) {	//if blank option selected
+			timetableItemUIObject.platformText.text = "";
+			if (activeTimetableItem.platform) {	 		//and previously a platform was selected (premised on the fact that activeTimetableItem will hold the timetable item as it was when it was first selected for modification (see OnClick_TimetableItemForModification))
+				GameManager.instance.RemovePlatformFromTimetableItem (activeTimetableItem);
+			}
+		} else if (modification_platformDropdown.options.Count > 1) {	//ignore this dropdown if it didnt have anything in it, otherwise something was selected
+			GameManager.instance.AssignPlatformToTimetableItem (modification_platformDropdown.value - 1,activeTimetableItem);	//Reference the platform selected by player N.B this is premised upon the dropdown options being populated by Model lists (i.e.trains,platforms) above meaning indexes of dropdown/Model will be just one apart because of blank option
 			timetableItemUIObject.platformText.text = activeTimetableItem.platform.platformNumber.ToString ();
 		}
-		if (activeTimetableItem.train != null) {	//if a train was selected by the player
+		if (modification_trainDropdown.value == 0) {	//if blank option selected
+			timetableItemUIObject.trainText.text = "";
+			if (activeTimetableItem.train) {	 		//and previously a train was selected (premised on the fact that activeTimetableItem will hold the timetable item as it was when it was first selected for modification (see OnClick_TimetableItemForModification))
+				GameManager.instance.RemoveTrainFromTimetableItem (activeTimetableItem);
+			}
+		} else if (modification_trainDropdown.options.Count > 1) {	//ignore this dropdown if it didnt have anything in it, otherwise something was selected
+			GameManager.instance.AssignTrainToTimetableItem (modification_trainDropdown.value - 1,activeTimetableItem);			//Reference the train selected by player N.B this is premised upon the dropdown options being populated by Model lists (i.e.trains,platforms) above meaning indexes of dropdown/Model will be just one apart because of blank option
 			timetableItemUIObject.trainText.text = activeTimetableItem.train.trainSerialID;
 		}
-		ReturnToDefaultOptionsMenu (itemModificationMenu);
-	}
-	public void OnClick_WipeModifiedItem() {
-		TimetableItemUIObject timetableItemUIObject;
-		timetableUITracker.TryGetValueBySecond (activeTimetableItem, out timetableItemUIObject);
-		timetableItemUIObject.platformText.text = "";
-		timetableItemUIObject.trainText.text = "";
-		GameManager.instance.WipeTimetableItemPlatformAndTrain (activeTimetableItem);
-
 		ReturnToDefaultOptionsMenu (itemModificationMenu);
 	}
 

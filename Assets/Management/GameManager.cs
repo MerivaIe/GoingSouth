@@ -96,10 +96,10 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 			}
 
 			destinations = new List<Destination> ();
-			destinations.Add (new Destination ("Bristow", 200,100));
-			destinations.Add (new Destination ("Lomdom", 70, 500));
-			destinations.Add (new Destination ("Basimgstoke", 100, 100));
-			destinations.Add (new Destination ("Edimburgh", 500, 20));	//takes long time so you want to wait for people to build up
+			destinations.Add (new Destination ("Bristow", 200,200));
+			destinations.Add (new Destination ("Lomdom", 70, 1000));
+			destinations.Add (new Destination ("Basimgstoke", 100, 200));
+			destinations.Add (new Destination ("Edimburgh", 500, 50));	//takes long time so you want to wait for people to build up
 
 			timetable = new List<TimetableItem>();
 		}
@@ -116,40 +116,36 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 
 	public void AssignTrainToTimetableItem(int trainIndex, TimetableItem timetableItem) {
 		Train train = trainPool.AvailableOptions [trainIndex];
-		timetableItem.SetTrain (train);
+		timetableItem.train = train;
 		train.OnAssignedToTimetableItem (timetableItem);
 		trainPool.ExhaustOption (train);
 	}
 
 	public void AssignPlatformToTimetableItem(int platformIndex, TimetableItem timetableItem) {
 		Platform platform = platforms.AvailableOptions [platformIndex];
-		timetableItem.SetPlatform (platform);
+		timetableItem.platform = platform;
 		platform.OnAssignedToTimetableItem (timetableItem);
 		platforms.ExhaustOption (platform);
 		RecalculateSoonestTimetableItemForDestination (timetableItem.destination);
 	}
 
 	public void RemoveTrainFromTimetableItem(TimetableItem timetableItem) {
-		trainPool.RestoreOption (timetableItem.train);
+		//for future reference: do not need to RestoreOption for train or platform because they are restored when item is first selected for modification, if it is then wiped they will stay restored!
 		timetableItem.train.OnRemovedFromTimetableItem (timetableItem);
+		timetableItem.train = null;
 	}
 
 	public void RemovePlatformFromTimetableItem(TimetableItem timetableItem) {
-		platforms.RestoreOption (timetableItem.platform);
+		//for future reference: do not need to RestoreOption for train or platform because they are restored when item is first selected for modification, if it is then wiped they will stay restored!
 		timetableItem.platform.OnRemovedFromTimetableItem (timetableItem);
+		timetableItem.platform = null;
+		RecalculateSoonestTimetableItemForDestination (timetableItem.destination);	//will set it to null unless there is another timetable item for this dest with a platform assignment
 	}
 
 	public void ConfirmCreatedTimetableItem(int destinationIndex, TimetableItem timetableItem) {
 		//scheduled departure time of the timetableItem passed to us is already set as it is changed by GameUIManager in response to player input
-		timetableItem.SetDestination (destinations [destinationIndex]);
+		timetableItem.destination = destinations [destinationIndex];
 		timetable.Add (timetableItem);
-	}
-
-	public void WipeTimetableItemPlatformAndTrain(TimetableItem timetableItem) {
-		timetableItem.SetTrain (null);
-		timetableItem.SetPlatform (null);
-		//for future reference: do not need to RestoreOption for train or platform because they are restored when item is first selected for modification, if it is then wiped they will stay restored!
-		RecalculateSoonestTimetableItemForDestination (timetableItem.destination);	//will set it to null unless there is another timetable item for this dest with a platform assignment
 	}
 		
 	public void OnTrainOutOfStation(TimetableItem timetableItem) {

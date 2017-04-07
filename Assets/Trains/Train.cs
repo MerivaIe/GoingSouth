@@ -118,7 +118,7 @@ public class Train : MonoBehaviour {
 	}
 
 	void CheckIfClearToEnterStation() {	//called once at the end of journey duration (invoked in Depart) and every time the train is assigned to a new timetable item
-		if (Time.time >= journeyEndTime && myCurrentTimetableItem != null && myCurrentTimetableItem.platform) {
+		if (Time.time >= journeyEndTime && myCurrentTimetableItem != null && myCurrentTimetableItem.platform && !myCurrentTimetableItem.modificationFlag) {
 			SetTrainColor (myCurrentTimetableItem.destination.materialColor);
 
 			if (myCurrentTimetableItem.platform.isLeftHanded) {	//set the train to be left or right handed according to platform
