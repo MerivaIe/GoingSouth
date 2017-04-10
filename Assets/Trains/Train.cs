@@ -9,6 +9,7 @@ public class Train : MonoBehaviour {
 	public enum TrainStatus {Arriving,Braking,BoardingTime,Departing,Parked,Idle}
 	public TrainStatus status;
 	public Vector3 direction;	//this should eventually be replaced with just transform.forward everywhere
+	public Vector3 myDockingPoint;
 	public Material materialColor;
 	public string trainSerialID { get; private set; }
 	public SphereCollider[] doors {get; private set;}	//has to be collider so that transform is queried once train reaches platform
@@ -131,6 +132,7 @@ public class Train : MonoBehaviour {
 			}
 
 			Vector3 trackPosition = transform.position;
+			//GameManager.instance.trainDockingPoints.RestoreOption (trackPosition);
 			trackPosition.z = myCurrentTimetableItem.platform.platformSignalTrigger.bounds.center.z + 1f;	//pivot of train is off centre by about 1 unit
 			transform.position = trackPosition;
 
@@ -174,8 +176,7 @@ public class Train : MonoBehaviour {
 			}
 			status = TrainStatus.Parked;
 			rb.velocity = Vector3.zero;
-			transform.position = GameManager.instance.trainDockingPoints.AvailableOptions [0];
-			GameManager.instance.trainDockingPoints.ExhaustOption (0);
+			transform.position = myDockingPoint;
 		}
 	}
 

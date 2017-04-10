@@ -44,7 +44,7 @@ public class ExhaustibleList<T> {
 			exhaustedOptions.Add (availableOptions[index]);
 			availableOptions.RemoveAt (index);
 		} else {
-			Debug.LogWarning ("Caller was attempting to exhaust an option but none are in the available list.");
+			Debug.LogWarning ("Caller was attempting to exhaust an option using index but none are in the available list.");
 		}
 	}
 

@@ -10,7 +10,6 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 	public const int dayStartInGameMinutes = 180, dayDurationInGameMinutes = 1080;
 	public ExhaustibleList<Platform> platforms{ get; private set; }
 	public ExhaustibleList<Train> trainPool { get; private set; }
-	public ExhaustibleList<Vector3> trainDockingPoints { get; private set; }
 	public List<Destination> destinations{ get; private set; }
 	public List<TimetableItem> timetable{ get; private set; }
 	public Collider outOfStationTrigger { get; private set; }
@@ -73,7 +72,7 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 			}
 
 			trainPool = new ExhaustibleList<Train>();
-			trainDockingPoints = new ExhaustibleList<Vector3> ();
+//			trainDockingPoints = new ExhaustibleList<Vector3> ();
 			Vector3 trainDockingPoint;
 			trainDockingPoint.x = outOfStationTrigger.bounds.center.x;
 			trainDockingPoint.y = 1.56f;
@@ -83,7 +82,7 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 				GameObject trainGO = Instantiate (oneCarriageTrainPrefab,trainDockingPoint,Quaternion.identity) as GameObject;
 				Train train = trainGO.GetComponent <Train> ();
 				train.Initialise ();	//Initialise some of Trains' properties early as they are required in DisplayManager before Trains' Start() method is called
-				trainDockingPoints.Add (trainDockingPoint);
+				train.myDockingPoint = trainDockingPoint;
 				trainPool.Add (train);
 			}
 			for (int i = 0; i < twoCarriageTrainCount; i++) {
@@ -91,15 +90,15 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 				GameObject trainGO = Instantiate (twoCarriageTrainPrefab,trainDockingPoint,Quaternion.identity) as GameObject;
 				Train train = trainGO.GetComponent <Train> ();
 				train.Initialise ();	//Initialise some of Trains' properties early as they are required in DisplayManager before Trains' Start() method is called
-				trainDockingPoints.Add (trainDockingPoint);
+				train.myDockingPoint = trainDockingPoint;
 				trainPool.Add (train);
 			}
 
 			destinations = new List<Destination> ();
-			destinations.Add (new Destination ("Bristow", 200,200));
-			destinations.Add (new Destination ("Lomdom", 70, 1000));
-			destinations.Add (new Destination ("Basimgstoke", 100, 200));
-			destinations.Add (new Destination ("Edimburgh", 500, 50));	//takes long time so you want to wait for people to build up
+			destinations.Add (new Destination ("Bristow", 200,400));	//these are going to be doubled, half when you see
+			destinations.Add (new Destination ("Lomdom", 70, 2000));
+			destinations.Add (new Destination ("Basimgstoke", 100, 400));
+			destinations.Add (new Destination ("Edimburgh", 500, 100));	//takes long time so you want to wait for people to build up
 
 			timetable = new List<TimetableItem>();
 		}
@@ -118,14 +117,14 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 		Train train = trainPool.AvailableOptions [trainIndex];
 		timetableItem.train = train;
 		train.OnAssignedToTimetableItem (timetableItem);
-		trainPool.ExhaustOption (train);
+		trainPool.ExhaustOption (trainIndex);
 	}
 
 	public void AssignPlatformToTimetableItem(int platformIndex, TimetableItem timetableItem) {
 		Platform platform = platforms.AvailableOptions [platformIndex];
 		timetableItem.platform = platform;
 		platform.OnAssignedToTimetableItem (timetableItem);
-		platforms.ExhaustOption (platform);
+		platforms.ExhaustOption (platformIndex);
 		RecalculateSoonestTimetableItemForDestination (timetableItem.destination);
 	}
 

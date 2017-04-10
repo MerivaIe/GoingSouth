@@ -138,7 +138,7 @@ public class Person : MonoBehaviour {
 				} else {
 					rb.velocity = nmAgent.speed * boardingVectorNormalized;
 				}
-			} else { //catches all other TRAIN statuses
+			} else { //catches all other TRAIN statuses when train is not boarding
 				if (status == PersonStatus.MovingToTrainDoor || status == PersonStatus.BoardingTrain) {	//pick up anyone who failed to board train
 					status = PersonStatus.ReadyToBoard;	//TODO: URGENT I do not think this is required now that in CheckForTimetableChanges it will send people back to foyer
 				}
@@ -249,7 +249,7 @@ public class Person : MonoBehaviour {
 			if (status == PersonStatus.BoardingTrain) {	//for any people that fall out of train while boarding just register them as passing through
 				waitingAreaEnterred.RegisterPersonPassingThrough (this);
 			} else if (status == PersonStatus.MovingToPlatform) {
-				if (myTargetTimetableItem != null && myTargetTimetableItem.train != null && myTargetTimetableItem.train.status == Train.TrainStatus.BoardingTime) {	//if we have entered a platform whilst train is boarding already then call OnTrainBoarding and just register that we are passing thrrough
+				if (myTargetTimetableItem != null && myTargetTimetableItem.train != null && myTargetTimetableItem.train.status == Train.TrainStatus.BoardingTime) {	//if we have entered a platform whilst train is boarding already then call OnTrainBoarding and just register that we are passing through
 					waitingAreaEnterred.RegisterPersonPassingThrough(this);
 					OnTrainBoardingTime ();
 				} else {

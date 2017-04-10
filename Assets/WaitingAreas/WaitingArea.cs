@@ -56,7 +56,7 @@ public class WaitingArea : MonoBehaviour {
 			waitLocation.person = null;	//set person = null for this waitLocation
 		} else {
 			if (!peoplePassingThrough.Remove (person)) {
-				Debug.LogWarning (person.ToString () + " (person) could not be found to unregister.");
+				Debug.LogWarning ("A person could not be found to unregister.");
 			}
 		}
 	}
