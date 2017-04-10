@@ -149,7 +149,6 @@ public class GameUIManager : MonoBehaviour {
 
 			Train previouslySelectedTrain = null;
 			if (previouslySelectedTrain != null) {	//if the item selected for mods had a train already chosen previously then restore it to available options
-				//GameManager.instance.RemoveTrainFromTimetableItem (activeTimetableItem);
 				GameManager.instance.trainPool.RestoreOption (activeTimetableItem.train);
 			}
 			modification_trainDropdown.ClearOptions ();
@@ -164,7 +163,6 @@ public class GameUIManager : MonoBehaviour {
 
 			Platform previouslySelectedPlatform = activeTimetableItem.platform;
 			if (previouslySelectedPlatform != null) {	//if the item selected for mods had a platform already chosen previously then restore it to available options and select it in the dropdown
-				//GameManager.instance.RemovePlatformFromTimetableItem (activeTimetableItem);
 				GameManager.instance.platforms.RestoreOption (activeTimetableItem.platform);
 			}
 			modification_platformDropdown.ClearOptions ();

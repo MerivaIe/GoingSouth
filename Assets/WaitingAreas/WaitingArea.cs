@@ -9,16 +9,16 @@ public class WaitingArea : MonoBehaviour {
 	public float waitSpacing = 1f;
 	public Bounds waitAreaTriggerBounds { get; private set; }
 
-	private List<WaitLocation> waitLocations = new List<WaitLocation> ();
-	private List<Person> peoplePassingThrough = new List<Person> ();
+	private List<WaitLocation> waitingPeople = new List<WaitLocation> ();
+	private List<Person> nonWaitingPeople = new List<Person> ();	//could be people passing through, could be people that are kicked back on to platform whilst boarding
 
 	void Start () {
 		waitAreaTriggerBounds = GetComponentInChildren<WaitingAreaTrigger>().gameObject.GetComponent <BoxCollider>().bounds;
 	}
 
-	public IEnumerable<Person> PeopleWaiting {
+	public IEnumerable<Person> PeopleInWaitingArea {
 		get {
-			return waitLocations.Where (w => w.person != null).Select (w => w.person);
+			return nonWaitingPeople.Concat (waitingPeople.Where (w => w.person != null).Select (w => w.person));
 		}
 	}
 
@@ -30,39 +30,39 @@ public class WaitingArea : MonoBehaviour {
 			waitLocation.z += sample.y + Person.nmAgentRadius;
 			NavMeshHit hit;										//using SamplePosition to make absolutely sure the wait location we have generated ends up on the navmesh
 			if (NavMesh.SamplePosition (waitLocation, out hit, 0.5f, NavMesh.AllAreas)) {
-				waitLocations.Add (new WaitLocation(hit.position,null));
+				waitingPeople.Add (new WaitLocation(hit.position,null));
 			}
 		}
 	}
 
 	public Vector3 RegisterPersonForWaiting(Person person) {
-		List<WaitLocation> freeWaitLocations = waitLocations.Where (a => a.person == null).ToList ();
+		List<WaitLocation> freeWaitLocations = waitingPeople.Where (a => a.person == null).ToList ();
 		if (freeWaitLocations.Count == 0) {	//no more wait locations, calculate some more
 			CalculateNewWaitLocations ();
-			freeWaitLocations = waitLocations;
+			freeWaitLocations = waitingPeople;
 		}
 		WaitLocation waitLocation = freeWaitLocations [Random.Range (0, freeWaitLocations.Count ())];
 		waitLocation.person = person;
 		return waitLocation.position;
 	}
 
-	public void RegisterPersonPassingThrough(Person person) {
-		peoplePassingThrough.Add (person);
+	public void RegisterNonWaitingPerson(Person person) {
+		nonWaitingPeople.Add (person);
 	}
 
 	public void UnregisterPerson(Person person) {
-		WaitLocation waitLocation = waitLocations.FirstOrDefault(w => w.person == person);
+		WaitLocation waitLocation = waitingPeople.FirstOrDefault(w => w.person == person);
 		if (waitLocation != null) {
 			waitLocation.person = null;	//set person = null for this waitLocation
 		} else {
-			if (!peoplePassingThrough.Remove (person)) {
+			if (!nonWaitingPeople.Remove (person)) {
 				Debug.LogWarning ("A person could not be found to unregister.");
 			}
 		}
 	}
 
 	public bool IsPersonRegistered(Person personToSearchFor) {
-		return peoplePassingThrough.Contains (personToSearchFor) || waitLocations.Any (w => w.person == personToSearchFor) ;
+		return nonWaitingPeople.Contains (personToSearchFor) || waitingPeople.Any (w => w.person == personToSearchFor) ;
 	}
 
 	private class WaitLocation {
@@ -75,9 +75,9 @@ public class WaitingArea : MonoBehaviour {
 	}
 
 	void OnDrawGizmos() {
-		if (waitLocations.Count > 0) {
+		if (waitingPeople.Count > 0) {
 			Gizmos.color = Color.yellow;
-			foreach (WaitLocation waitLocation in waitLocations.Where (a => a.person == null)) {
+			foreach (WaitLocation waitLocation in waitingPeople.Where (a => a.person == null)) {
 				Gizmos.DrawSphere (waitLocation.position, 0.1f);
 			}
 		}

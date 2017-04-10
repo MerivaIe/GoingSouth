@@ -9,14 +9,10 @@ using MoreLinq;
 [RequireComponent(typeof(NavMeshAgent))]
 public class Person : MonoBehaviour {
 	public bool insideTrain {get; private set;}
-	/// <summary>
-	/// PersonStatus: MovingToPlatform=nmAgent control to centre of platform | WrongPlatform=nmAgent control to waiting area | MovingToDoor=nmAgent control to one door location | Boarding=physics control avoidance of others
-	/// </summary>
 	public enum PersonStatus{MovingToFoyer,AtFoyer,MovingToPlatform,ReadyToBoard,MovingToTrainDoor,BoardingTrain,FindingSeat,SatDown,Compromised}
 	public PersonStatus status;
 	public Destination desiredDestination;
-	public float boardingForce = 20f, nudgeForce = 1f, checkingInterval = 0.5f,proximityDistance = 0.5f, centreOfMassYOffset = 0f;
-	public static float sqrTargetThreshold = 4f;
+	public float boardingForce = 20f, nudgeForce = 1f, checkingInterval = 0.5f,proximityDistance = 0.5f, centreOfMassYOffset = 0f, sqrTargetThreshold = 0.01f;
 	public static float nmAgentRadius {get; private set;}
 	public static int peopleCount { get; private set; }
 	public static int totalApprovalRating {get; private set;}
@@ -24,11 +20,12 @@ public class Person : MonoBehaviour {
 	private NavMeshAgent nmAgent;
 	private NavMeshObstacle nmObstacle;
 	private Rigidbody rb;
-	private Vector3 waitingTarget, trainTarget, toWaitingTarget;	//different wait and train targets so that
+	private Vector3 waitingTarget, trainTarget, toWaitingTarget;	//different wait and train targets
 	private static float[] proximityAngles;
 	private float nextCheckTime = 0f, arrivalTimeAtStation;
 	private bool boardUsingForce = false, atWaitingTarget = false;
 	private TimetableItem myTargetTimetableItem;
+	private Platform myTargetPlatform; //inefficient mechanism required just in case people are given one platform and then it is changed in the same timetable item
 
 	void Awake () {	//Awake used because Start() is not called before methods on instantiated gameObject it seems
 		rb = GetComponent <Rigidbody> ();
@@ -72,22 +69,24 @@ public class Person : MonoBehaviour {
 
 	void CheckForTimetableChanges() {
 		if (desiredDestination.soonestTimetableItem != null) {
-			if (desiredDestination.soonestTimetableItem != myTargetTimetableItem) {
+			if (myTargetTimetableItem != desiredDestination.soonestTimetableItem || (myTargetTimetableItem.platform != null && myTargetPlatform != myTargetTimetableItem.platform)) {	//if destination's soonest timetable item is different to this person's timetable item OR the target timetable item's platform has changed
 				switch (status) {	//only statuses where person is at waiting area, moving to platform, or waiting at platform- any other statuses mean Person is already boarding train or compromised
 				case PersonStatus.MovingToFoyer:
 				case PersonStatus.AtFoyer:
 				case PersonStatus.MovingToPlatform:
 					myTargetTimetableItem = desiredDestination.soonestTimetableItem;
-					SetMovingToWaitingArea (true, myTargetTimetableItem.platform.waitingArea);
+					myTargetPlatform = myTargetTimetableItem.platform;
+					SetMovingToPlatform();
 					break;
 				case PersonStatus.ReadyToBoard:
 					myTargetTimetableItem = desiredDestination.soonestTimetableItem;
+					myTargetPlatform = myTargetTimetableItem.platform;
 					if (myTargetTimetableItem.platform.waitingArea.IsPersonRegistered (this)) {	//if already at platform then perform the following inefficient reset
 						myTargetTimetableItem.platform.waitingArea.UnregisterPerson (this);
 						status = PersonStatus.MovingToPlatform;
 						OnWaitingAreaEnter (myTargetTimetableItem.platform.waitingArea);
 					} else {
-						SetMovingToWaitingArea (true, myTargetTimetableItem.platform.waitingArea);
+						SetMovingToPlatform();
 					}
 					break;
 				}
@@ -101,7 +100,7 @@ public class Person : MonoBehaviour {
 						status = PersonStatus.MovingToFoyer;
 						OnWaitingAreaEnter (GameManager.instance.foyer);
 					} else {	//else person is outside the foyer so just retarget the foyer
-						SetMovingToWaitingArea (false, GameManager.instance.foyer);
+						SetMovingToFoyer ();
 					}
 				} else {	//destination soonest timetable item null and Person doesn't have one set so still waiting... (yawn)
 					if (Time.time - arrivalTimeAtStation > (30/GameManager.gameMinutesPerRealSecond)) {	//if waiting for more than 30 minutes
@@ -114,10 +113,9 @@ public class Person : MonoBehaviour {
 
 	//might be better to actually do all of this on a switch(on status) at the base level actually- it is getting hard to read
 	void FixedUpdate() {
-		if (myTargetTimetableItem == null || myTargetTimetableItem.train == null) {return;}
 		//only the four following statuses need to be handled in fixed update...
 		if (status == PersonStatus.FindingSeat || status == PersonStatus.ReadyToBoard || status == PersonStatus.MovingToTrainDoor || status == PersonStatus.BoardingTrain) {
-			if (myTargetTimetableItem.train.status == Train.TrainStatus.BoardingTime) {
+			if (myTargetTimetableItem != null && myTargetTimetableItem.train != null && myTargetTimetableItem.train.status == Train.TrainStatus.BoardingTime) {
 				if (status == PersonStatus.FindingSeat) {
 					if (rb.mass == 10f && Vector3.Angle (transform.up, Vector3.up) < 30f) {	//if this is a light person and they are standing then add up force for crowd surfing
 						rb.AddForce (Vector3.up, ForceMode.Acceleration);
@@ -142,11 +140,11 @@ public class Person : MonoBehaviour {
 				if (status == PersonStatus.MovingToTrainDoor || status == PersonStatus.BoardingTrain) {	//pick up anyone who failed to board train
 					status = PersonStatus.ReadyToBoard;	//TODO: URGENT I do not think this is required now that in CheckForTimetableChanges it will send people back to foyer
 				}
-				if (status == PersonStatus.ReadyToBoard) {
+				if (status == PersonStatus.ReadyToBoard) {	//TODO: URGENT turning physics on for people waiting seems to drastically derease performance... why?
 					// could add an interval to this check if this is too heavy on performance (i.e. 'if (Time.time > nextCheckTime) {')
 					toWaitingTarget.x = waitingTarget.x - transform.position.x;
 					toWaitingTarget.z = waitingTarget.z - transform.position.z;
-					atWaitingTarget = toWaitingTarget.sqrMagnitude < 0.01f;	//<0.1^2
+					atWaitingTarget = toWaitingTarget.sqrMagnitude < sqrTargetThreshold;	//<0.1^2
 					if (atWaitingTarget && nmAgent.enabled) {			//if under agent control and close to target: turn off agent
 						SetAgentControl (false);
 					} else if (!atWaitingTarget && !nmAgent.enabled) {	//else under physics control and not close: nudge towards target
@@ -218,11 +216,13 @@ public class Person : MonoBehaviour {
 		}
 	}
 
-	public void OnTrainBoardingTime() {
-		SetAgentControl (false);
-		SetDoorTarget ();
-		transform.LookAt (trainTarget);	//maybe look at random target? or smoother
-		status = PersonStatus.MovingToTrainDoor;
+	public void OnTrainBoardingTime(Train train) {	//called 'optimistically' on EVERYONE at platform... some people may be passing through which is why we have the check here
+		if (train == myTargetTimetableItem.train) {
+			SetAgentControl (false);
+			SetDoorTarget ();
+			transform.LookAt (trainTarget);	//maybe look at random target? or smoother
+			status = PersonStatus.MovingToTrainDoor;
+		}
 	}
 
 	public void OnTrainDeparture() {
@@ -232,26 +232,26 @@ public class Person : MonoBehaviour {
 		totalApprovalRating += 50;
 	}
 
-	public void SetMovingToWaitingArea(bool isPlatform, WaitingArea waitingArea) {
+	public void SetMovingToPlatform() {
 		SetAgentControl (true);	//may jerk them up... change this to after a recovery period once they have stood up?
-		nmAgent.SetDestination (waitingArea.waitAreaTriggerBounds.center);
-		status = isPlatform? PersonStatus.MovingToPlatform : PersonStatus.MovingToFoyer;	
+		nmAgent.SetDestination (myTargetTimetableItem.platform.waitingArea.waitAreaTriggerBounds.center);
+		status = PersonStatus.MovingToPlatform;
 	}
-	public void SetMovingToWaitingArea() {	//this exists purely so that this function can be invoked by OnHitGround() [targetWaitingArea will already have been set if someone hits ground]
-		bool isPlatform = !(status == PersonStatus.AtFoyer || status == PersonStatus.MovingToFoyer);
-		WaitingArea targetWaitingArea = isPlatform ? myTargetTimetableItem.platform.waitingArea : GameManager.instance.foyer;
-		SetMovingToWaitingArea (isPlatform,targetWaitingArea);
+	public void SetMovingToFoyer() {
+		SetAgentControl (true);	//may jerk them up... change this to after a recovery period once they have stood up?
+		nmAgent.SetDestination (GameManager.instance.foyer.waitAreaTriggerBounds.center);
+		status = PersonStatus.MovingToFoyer;
 	}
 		
 	public void OnWaitingAreaEnter(WaitingArea waitingAreaEnterred) {
 		WaitingArea desiredWaitingArea = (myTargetTimetableItem != null && myTargetTimetableItem.platform != null) ? myTargetTimetableItem.platform.waitingArea : GameManager.instance.foyer;
 		if (waitingAreaEnterred == desiredWaitingArea) {
 			if (status == PersonStatus.BoardingTrain) {	//for any people that fall out of train while boarding just register them as passing through
-				waitingAreaEnterred.RegisterPersonPassingThrough (this);
+				waitingAreaEnterred.RegisterNonWaitingPerson (this);
 			} else if (status == PersonStatus.MovingToPlatform) {
 				if (myTargetTimetableItem != null && myTargetTimetableItem.train != null && myTargetTimetableItem.train.status == Train.TrainStatus.BoardingTime) {	//if we have entered a platform whilst train is boarding already then call OnTrainBoarding and just register that we are passing through
-					waitingAreaEnterred.RegisterPersonPassingThrough(this);
-					OnTrainBoardingTime ();
+					waitingAreaEnterred.RegisterNonWaitingPerson(this);
+					OnTrainBoardingTime (myTargetTimetableItem.train);
 				} else {
 					status = PersonStatus.ReadyToBoard;
 					SetMovingToWaitLocationInWaitingArea (waitingAreaEnterred);
@@ -261,7 +261,7 @@ public class Person : MonoBehaviour {
 				SetMovingToWaitLocationInWaitingArea (waitingAreaEnterred);
 			}
 		} else {
-			waitingAreaEnterred.RegisterPersonPassingThrough (this);
+			waitingAreaEnterred.RegisterNonWaitingPerson (this);
 		}
 	}
 
@@ -281,7 +281,12 @@ public class Person : MonoBehaviour {
 
 	public void OnHitGround() {						//make the person return to their waiting area
 		if (status != PersonStatus.Compromised) {
-			Invoke("SetMovingToWaitingArea",2f);	//TODO: LOW PRIORITY invoke after they have stood up
+			if (status == PersonStatus.AtFoyer || status == PersonStatus.MovingToFoyer) {
+				Invoke ("SetMovingToFoyer", 2f);	//TODO: LOW PRIORITY invoke after they have stood up
+			} else {
+				myTargetPlatform = myTargetTimetableItem.platform;	//just hygiene: ensuring target platform is set; see comments further up for its use (not important if someone has hit ground)
+				Invoke ("SetMovingToPlatform", 2f);
+			}
 		}
 	}
 

@@ -28,9 +28,9 @@ public class Platform : MonoBehaviour {
 		//empty for now
 	}
 
-	public void OnTrainBoardingTime() {
-		foreach (Person person in waitingArea.PeopleWaiting) {
-			person.OnTrainBoardingTime ();
+	public void OnTrainBoardingTime(Train train) {
+		foreach (Person person in waitingArea.PeopleInWaitingArea) {
+			person.OnTrainBoardingTime (train);
 		}
 	}
 }

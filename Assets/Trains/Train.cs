@@ -76,7 +76,7 @@ public class Train : MonoBehaviour {
 	void SetBoardingTime() {
 		animator.ResetTrigger ("doorOpen");
 		status = TrainStatus.BoardingTime;
-		myCurrentTimetableItem.platform.OnTrainBoardingTime();
+		myCurrentTimetableItem.platform.OnTrainBoardingTime(this);
 		foreach (SphereCollider doorTrigger in doors) {
 			doorTrigger.enabled = true;
 		}
