@@ -25,7 +25,7 @@ public class Person : MonoBehaviour {
 	private float nextCheckTime = 0f, arrivalTimeAtStation;
 	private bool boardUsingForce = false, atWaitingTarget = false;
 	private TimetableItem myTargetTimetableItem;
-	private Platform myTargetPlatform; //inefficient mechanism required just in case people are given one platform and then it is changed in the same timetable item
+	private Platform myTargetPlatform; //required in case people are given one platform and then it is changed in the same timetable item
 
 	void Awake () {	//Awake used because Start() is not called before methods on instantiated gameObject it seems
 		rb = GetComponent <Rigidbody> ();
@@ -81,7 +81,7 @@ public class Person : MonoBehaviour {
 				case PersonStatus.ReadyToBoard:
 					myTargetTimetableItem = desiredDestination.soonestTimetableItem;
 					myTargetPlatform = myTargetTimetableItem.platform;
-					if (myTargetTimetableItem.platform.waitingArea.IsPersonRegistered (this)) {	//if already at platform then perform the following inefficient reset
+					if (myTargetTimetableItem.platform.waitingArea.IsPersonRegistered (this)) {	//if already at platform then perform the following inelegant reset
 						myTargetTimetableItem.platform.waitingArea.UnregisterPerson (this);
 						status = PersonStatus.MovingToPlatform;
 						OnWaitingAreaEnter (myTargetTimetableItem.platform.waitingArea);
@@ -95,7 +95,7 @@ public class Person : MonoBehaviour {
 			if (status != PersonStatus.SatDown && status != PersonStatus.Compromised) {	//(people on train or compromised should ignore)
 				if (myTargetTimetableItem != null) {	//...and this person has a timetableItem set then it means platform has been deselected or timetable item already satisfied before Person could reach the train
 					myTargetTimetableItem = null;
-					if (GameManager.instance.foyer.IsPersonRegistered (this)) {	//if person already in foyer then perform series of fairly inefficient resetting steps
+					if (GameManager.instance.foyer.IsPersonRegistered (this)) {	//if person already in foyer then perform series of fairly inelegant resetting steps
 						GameManager.instance.foyer.UnregisterPerson (this);
 						status = PersonStatus.MovingToFoyer;
 						OnWaitingAreaEnter (GameManager.instance.foyer);
@@ -216,8 +216,8 @@ public class Person : MonoBehaviour {
 		}
 	}
 
-	public void OnTrainBoardingTime(Train train) {	//called 'optimistically' on EVERYONE at platform... some people may be passing through which is why we have the check here
-		if (train == myTargetTimetableItem.train) {
+	public void OnTrainBoardingTime() {	//called 'optimistically' on EVERYONE at platform... some people may be passing through which is why we have the check here
+		if (status == PersonStatus.ReadyToBoard) {
 			SetAgentControl (false);
 			SetDoorTarget ();
 			transform.LookAt (trainTarget);	//maybe look at random target? or smoother
@@ -249,11 +249,11 @@ public class Person : MonoBehaviour {
 			if (status == PersonStatus.BoardingTrain) {	//for any people that fall out of train while boarding just register them as passing through
 				waitingAreaEnterred.RegisterNonWaitingPerson (this);
 			} else if (status == PersonStatus.MovingToPlatform) {
+				status = PersonStatus.ReadyToBoard;
 				if (myTargetTimetableItem != null && myTargetTimetableItem.train != null && myTargetTimetableItem.train.status == Train.TrainStatus.BoardingTime) {	//if we have entered a platform whilst train is boarding already then call OnTrainBoarding and just register that we are passing through
 					waitingAreaEnterred.RegisterNonWaitingPerson(this);
-					OnTrainBoardingTime (myTargetTimetableItem.train);
+					OnTrainBoardingTime ();
 				} else {
-					status = PersonStatus.ReadyToBoard;
 					SetMovingToWaitLocationInWaitingArea (waitingAreaEnterred);
 				}
 			} else if (status == PersonStatus.MovingToFoyer) {
@@ -266,8 +266,10 @@ public class Person : MonoBehaviour {
 	}
 
 	public void OnWaitingAreaExit(WaitingArea waitingArea) {
-		waitingArea.UnregisterPerson (this);
-		if (status != PersonStatus.MovingToPlatform) {	//fixed: do not want people moving out of foyer and onto platform to suddenly go limp
+		if (status != PersonStatus.ReadyToBoard) {	//fix: when people are moving to their wait location they sometimes have to move out of the platform waiting trigger
+			waitingArea.UnregisterPerson (this);
+		}
+		if (status != PersonStatus.MovingToPlatform) {	//fix: do not want people moving out of foyer and onto platform to suddenly go limp
 			rb.constraints = RigidbodyConstraints.None;
 		}
 	}
@@ -279,13 +281,15 @@ public class Person : MonoBehaviour {
 		rb.constraints = RigidbodyConstraints.FreezePositionY;	//TODO: [this is required to get people who have fallen back to y lock] MEDIUM PRIORITY believe this is what is causing some people to penetrate the platform slightly (they must be reentering at wrong height)
 	}
 
-	public void OnHitGround() {						//make the person return to their waiting area
+	public void OnHitGround() {		//make the person return to their waiting area
 		if (status != PersonStatus.Compromised) {
-			if (status == PersonStatus.AtFoyer || status == PersonStatus.MovingToFoyer) {
-				Invoke ("SetMovingToFoyer", 2f);	//TODO: LOW PRIORITY invoke after they have stood up
-			} else {
+			nmAgent.speed /= 3f;	//reduce their speed 'because they are hurt' (really just so there is a higher chance of being hit)
+			if (myTargetTimetableItem != null && myTargetTimetableItem.platform != null) {
 				myTargetPlatform = myTargetTimetableItem.platform;	//just hygiene: ensuring target platform is set; see comments further up for its use (not important if someone has hit ground)
 				Invoke ("SetMovingToPlatform", 2f);
+			} else {
+				myTargetPlatform = null;	
+				Invoke ("SetMovingToFoyer", 2f);	//TODO: LOW PRIORITY invoke after they have stood up
 			}
 		}
 	}
@@ -321,5 +325,7 @@ public class Person : MonoBehaviour {
 			Gizmos.color = Color.green;
 			Gizmos.DrawSphere (trainTarget,0.2f);
 		}
+		Gizmos.color = Color.yellow;
+		Gizmos.DrawSphere (waitingTarget,0.2f);
 	}
 }

@@ -36,10 +36,11 @@ public class WaitingArea : MonoBehaviour {
 	}
 
 	public Vector3 RegisterPersonForWaiting(Person person) {
-		List<WaitLocation> freeWaitLocations = waitingPeople.Where (a => a.person == null).ToList ();
+		List<WaitLocation> freeWaitLocations = waitingPeople.Where (w => w.person == null).ToList ();
 		if (freeWaitLocations.Count == 0) {	//no more wait locations, calculate some more
 			CalculateNewWaitLocations ();
-			freeWaitLocations = waitingPeople;
+			freeWaitLocations = waitingPeople.Where (w => w.person == null).ToList ();
+			Debug.Log ("All wait locations consumed. Generating more wait locations.");
 		}
 		WaitLocation waitLocation = freeWaitLocations [Random.Range (0, freeWaitLocations.Count ())];
 		waitLocation.person = person;
@@ -57,6 +58,7 @@ public class WaitingArea : MonoBehaviour {
 		} else {
 			if (!nonWaitingPeople.Remove (person)) {
 				Debug.LogWarning ("A person could not be found to unregister.");
+				Debug.DrawRay (person.transform.position,Vector3.up * 5f,Color.red,5f);
 			}
 		}
 	}

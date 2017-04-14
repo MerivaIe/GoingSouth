@@ -30,7 +30,7 @@ public class Platform : MonoBehaviour {
 
 	public void OnTrainBoardingTime(Train train) {
 		foreach (Person person in waitingArea.PeopleInWaitingArea) {
-			person.OnTrainBoardingTime (train);
+			person.OnTrainBoardingTime ();
 		}
 	}
 }
