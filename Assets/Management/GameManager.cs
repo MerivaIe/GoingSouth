@@ -15,7 +15,7 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 	public Collider outOfStationTrigger { get; private set; }
 	public WaitingArea foyer { get; private set; }
 	public List<Material> defaultMaterialColors;	//set in Editor
-	public int oneCarriageTrainCount = 4;			//set in Editor
+	public int oneCarriageTrainCount = 3;			//set in Editor
 	public int twoCarriageTrainCount = 1;			//set in Editor
 	public GameObject oneCarriageTrainPrefab;		//set in Editor
 	public GameObject twoCarriageTrainPrefab;		//set in Editor
@@ -66,9 +66,11 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 			Debug.LogWarning ("Another GameManager has somehow assigned to variables. There should only be one GameManager in the scene.");
 		} else {
 			platforms = new ExhaustibleList<Platform> ();
-			platforms.AddRange(GameObject.FindObjectsOfType<Platform> ().OrderBy (a => a.transform.position.z).ToList ());	//order by arrangement on z axis so that platforms can then be numbered sensibly
-			for (int i = 0; i < platforms.AllOptions.Count; i++) {
-				platforms.AllOptions [i].platformNumber = i + 1;
+			IEnumerable<Platform> orderedPlatforms = GameObject.FindObjectsOfType<Platform> ().OrderBy (a => a.transform.position.z);	//order by arrangement on z axis so that platforms can then be numbered sensibly
+			int j = 1;
+			foreach (Platform platform in orderedPlatforms) {
+				platform.platformNumber = j++;
+				platforms.Add (platform.platformNumber.ToString (), platform);
 			}
 
 			trainPool = new ExhaustibleList<Train>();
@@ -82,7 +84,7 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 				Train train = trainGO.GetComponent <Train> ();
 				train.Initialise ();	//Initialise some of Trains' properties early as they are required in DisplayManager before Trains' Start() method is called
 				train.myDockingPoint = trainDockingPoint;
-				trainPool.Add (train);
+				trainPool.Add (train.trainSerialID,train);
 			}
 			for (int i = 0; i < twoCarriageTrainCount; i++) {
 				trainDockingPoint.z += 5f;	//position trains along the z axis... when they are called into service/ journey time is complete just need to change z position to that of the platform's signal trigger and then go
@@ -90,14 +92,16 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 				Train train = trainGO.GetComponent <Train> ();
 				train.Initialise ();	//Initialise some of Trains' properties early as they are required in DisplayManager before Trains' Start() method is called
 				train.myDockingPoint = trainDockingPoint;
-				trainPool.Add (train);
+				trainPool.Add (train.trainSerialID, train);
 			}
 
 			destinations = new List<Destination> ();
-			destinations.Add (new Destination ("Bristow", 200,400));	//these are going to be doubled, half when you see
-			destinations.Add (new Destination ("Lomdom", 70, 2000));
 			destinations.Add (new Destination ("Basimgstoke", 100, 400));
+			destinations.Add (new Destination ("Bristow", 200,400));
+			destinations.Add (new Destination ("Camterbury", 150, 200));
 			destinations.Add (new Destination ("Edimburgh", 500, 100));	//takes long time so you want to wait for people to build up
+			destinations.Add (new Destination ("Lomdom", 70, 2000));
+			destinations.Add (new Destination ("Southamptom", 100, 400));
 
 			timetable = new List<TimetableItem>();
 		}
@@ -112,18 +116,16 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 		return newTimetableItem;
 	}
 
-	public void AssignTrainToTimetableItem(int trainIndex, TimetableItem timetableItem) {
-		Train train = trainPool.AvailableOptions [trainIndex];
+	public void AssignTrainToTimetableItem(string trainSerialID, TimetableItem timetableItem) {
+		Train train = trainPool.UseItem (trainSerialID);
 		timetableItem.train = train;
 		train.OnAssignedToTimetableItem (timetableItem);
-		trainPool.ExhaustOption (trainIndex);
 	}
 
-	public void AssignPlatformToTimetableItem(int platformIndex, TimetableItem timetableItem) {
-		Platform platform = platforms.AvailableOptions [platformIndex];
+	public void AssignPlatformToTimetableItem(string platformNo, TimetableItem timetableItem) {
+		Platform platform = platforms.UseItem (platformNo);
 		timetableItem.platform = platform;
 		platform.OnAssignedToTimetableItem (timetableItem);
-		platforms.ExhaustOption (platformIndex);
 		RecalculateSoonestTimetableItemForDestination (timetableItem.destination);
 	}
 
@@ -148,8 +150,8 @@ public class GameManager : MonoBehaviour {	//Singleton [I'm sorry]
 	}
 		
 	public void OnTrainOutOfStation(TimetableItem timetableItem) {
-		trainPool.RestoreOption (timetableItem.train);	//TODO: it seems that this sometimes calls on options that are already restored... investigate
-		platforms.RestoreOption (timetableItem.platform);
+		trainPool.RestoreItem (timetableItem.train.trainSerialID, timetableItem.train);	//TODO: it seems that this sometimes calls on options that are already restored... investigate
+		platforms.RestoreItem (timetableItem.platform.platformNumber.ToString (), timetableItem.platform);
 		timetable.Remove (timetableItem);
 		RecalculateSoonestTimetableItemForDestination (timetableItem.destination);
 	}

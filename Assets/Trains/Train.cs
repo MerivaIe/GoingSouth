@@ -132,7 +132,6 @@ public class Train : MonoBehaviour {
 			}
 
 			Vector3 trackPosition = transform.position;
-			//GameManager.instance.trainDockingPoints.RestoreOption (trackPosition);
 			trackPosition.z = myCurrentTimetableItem.platform.platformSignalTrigger.bounds.center.z + 1f;	//pivot of train is off centre by about 1 unit
 			transform.position = trackPosition;
 

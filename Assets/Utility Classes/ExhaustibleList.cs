@@ -5,53 +5,44 @@ using UnityEngine;
 using System.Linq;
 
 /// <summary>
-/// Exhaustible list: wen an option is chosen it becomes unavailable. At the moment the onus is on the caller to exhaust the option just chosen- would be nice to extend List and then override the index method so that when something is retrieved this class removes it.
+/// Exhaustible list: when an option is chosen it becomes unavailable. At the moment the onus is on the caller to exhaust the option just chosen- would be nice to extend List and then override the index method so that when something is retrieved this class removes it.
 /// </summary>
 public class ExhaustibleList<T> {
-	private List<T> availableOptions = new List<T> ();
+	private SortedDictionary<string,T> availableOptions = new SortedDictionary<string, T> ();
 	private List<T> exhaustedOptions = new List<T>();
 
 	public ReadOnlyCollection<T> AvailableOptions{
 		get{
-			return availableOptions.AsReadOnly ();
+			return availableOptions.Values.ToList().AsReadOnly ();
 		}
 	}
 
 	public ReadOnlyCollection<T> AllOptions{
 		get{
-			return availableOptions.Concat (exhaustedOptions).ToList ().AsReadOnly ();
+			return exhaustedOptions.Concat (availableOptions.Values).ToList ().AsReadOnly();
 		}
 	}
 
-	public void Add(T item) {
-		availableOptions.Add (item);
+	public void Add(string keyString, T item) {
+		availableOptions.Add (keyString, item);
 	}
 
-	public void AddRange(List<T> listToAdd) {
-		availableOptions.AddRange (listToAdd);
-	}
-
-	public void ExhaustOption(T item) {
-		if (availableOptions.Contains (item)) {
-			exhaustedOptions.Add (item);
-			availableOptions.Remove (item);
+	public T UseItem(string keyString) {
+		T myItem;
+		availableOptions.TryGetValue (keyString,out myItem);
+		if (myItem != null) {
+			availableOptions.Remove (keyString);
+			exhaustedOptions.Add (myItem);
+			return myItem;
 		} else {
-			Debug.LogWarning ("Caller was attempting to exhaust an option that was not available.");
-		}
-	}
-	public void ExhaustOption(int index) {
-		if (availableOptions.Count > 0) {
-			exhaustedOptions.Add (availableOptions[index]);
-			availableOptions.RemoveAt (index);
-		} else {
-			Debug.LogWarning ("Caller was attempting to exhaust an option using index but none are in the available list.");
+			Debug.LogWarning ("Caller was attempting to use an item that was not available.");
+			return default(T);
 		}
 	}
 
-	public void RestoreOption(T item) {
-		if (exhaustedOptions.Contains (item)) {
-			availableOptions.Add (item);
-			exhaustedOptions.Remove (item);
+	public void RestoreItem(string keyString, T item) {
+		if (exhaustedOptions.Remove (item)) {
+			availableOptions.Add (keyString, item);
 		} else {
 			Debug.LogWarning ("Caller was attempting to restore an option that was not available.");
 		}

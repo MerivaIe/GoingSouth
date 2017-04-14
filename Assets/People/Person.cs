@@ -283,7 +283,7 @@ public class Person : MonoBehaviour {
 
 	public void OnHitGround() {		//make the person return to their waiting area
 		if (status != PersonStatus.Compromised) {
-			nmAgent.speed /= 3f;	//reduce their speed 'because they are hurt' (really just so there is a higher chance of being hit)
+			nmAgent.speed /= 2f;	//reduce their speed 'because they are hurt' (really just so there is a higher chance of being hit)
 			if (myTargetTimetableItem != null && myTargetTimetableItem.platform != null) {
 				myTargetPlatform = myTargetTimetableItem.platform;	//just hygiene: ensuring target platform is set; see comments further up for its use (not important if someone has hit ground)
 				Invoke ("SetMovingToPlatform", 2f);
