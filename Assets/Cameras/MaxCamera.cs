@@ -1,6 +1,5 @@
-﻿// original: http://www.unifycommunity.com/wiki/index.php?title=MouseOrbitZoom
-//
-// --01-18-2010 - create temporary target, if none supplied at start
+﻿// Original: http://www.unifycommunity.com/wiki/index.php?title=MouseOrbitZoom
+// Modified by Ben Merivale Apr 2017
 
 using UnityEngine;
 using System.Collections;
@@ -63,13 +62,8 @@ public class MaxCamera : MonoBehaviour
      */
 	void LateUpdate()
 	{
-		// If Control and Alt and Middle button? ZOOM!
-		if (Input.GetMouseButton(2) && Input.GetKey(KeyCode.LeftAlt) && Input.GetKey(KeyCode.LeftControl))
-		{
-			desiredDistance -= Input.GetAxis("Mouse Y") * Time.deltaTime * zoomRate*0.125f * Mathf.Abs(desiredDistance);
-		}
 		// If right button held down? ORBIT
-		else if (Input.GetMouseButton(1))
+		if (Input.GetMouseButton(1))
 		{
 			xDeg += Input.GetAxis("Mouse X") * xSpeed * 0.02f;
 			yDeg -= Input.GetAxis("Mouse Y") * ySpeed * 0.02f;
@@ -93,6 +87,10 @@ public class MaxCamera : MonoBehaviour
 			target.Translate(Vector3.right * -Input.GetAxis("Mouse X") * panSpeed);
 			target.Translate(transform.up * -Input.GetAxis("Mouse Y") * panSpeed, Space.World);
 		}
+		/////////////////////////TODO URGENT MOVE TRANSLATION INTO THE FIXEDUPDATE OR ELSE THIS STARTS GETTING VERY LAGGY....SEE HOW IT BEHANVES
+		Vector3 targetTranslation = transform.forward * Input.GetAxis ("Vertical") + transform.right * Input.GetAxis ("Horizontal");
+		targetTranslation.y = 0f;
+		target.Translate (targetTranslation * panSpeed);
 
 		////////Orbit Position
 
